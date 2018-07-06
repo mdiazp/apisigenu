@@ -1,0 +1,288 @@
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <title>Tutorial 0 - Get it Running &#8212; PostgREST 5.0.0 documentation</title>
+    <link rel="stylesheet" href="../_static/classic.css" type="text/css" />
+    <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+    <link rel="stylesheet" href="../_static/css/custom.css" type="text/css" />
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../',
+        VERSION:     '5.0.0',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true,
+        SOURCELINK_SUFFIX: '.txt'
+      };
+    </script>
+    <script type="text/javascript" src="../_static/jquery.js"></script>
+    <script type="text/javascript" src="../_static/underscore.js"></script>
+    <script type="text/javascript" src="../_static/doctools.js"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="Tutorial 1 - The Golden Key" href="tut1.html" />
+    <link rel="prev" title="Motivation" href="../intro.html" /> 
+  </head>
+  <body>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="tut1.html" title="Tutorial 1 - The Golden Key"
+             accesskey="N">next</a> |</li>
+        <li class="right" >
+          <a href="../intro.html" title="Motivation"
+             accesskey="P">previous</a> |</li>
+        <li class="nav-item nav-item-0"><a href="../index.html">PostgREST 5.0.0 documentation</a> &#187;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <div class="section" id="tutorial-0-get-it-running">
+<span id="tut0"></span><h1>Tutorial 0 - Get it Running<a class="headerlink" href="#tutorial-0-get-it-running" title="Permalink to this headline">¶</a></h1>
+<p>Welcome to PostgREST! In this pre-tutorial we’re going to get things running so you can create your first simple API.</p>
+<p>PostgREST is a standalone web server which turns a PostgreSQL database into a RESTful API. It serves an API that is customized based on the structure of the underlying database.</p>
+<img alt="../_images/tut0-request-flow.png" src="../_images/tut0-request-flow.png" />
+<p>To make an API we’ll simply be building a database. All the endpoints and permissions come from database objects like tables, views, roles, and stored procedures. These tutorials will cover a number of common scenarios and how to model them in the database.</p>
+<p>By the end of this tutorial you’ll have a working database, PostgREST server, and a simple single-user todo list API.</p>
+<div class="section" id="step-1-relax-we-ll-help">
+<h2>Step 1. Relax, we’ll help<a class="headerlink" href="#step-1-relax-we-ll-help" title="Permalink to this headline">¶</a></h2>
+<p>As you begin the tutorial, pop open the project <a class="reference external" href="https://gitter.im/begriffs/postgrest">chat room</a> in another tab.  There are a nice group of people active in the project and we’ll help you out if you get stuck.</p>
+</div>
+<div class="section" id="step-2-install-postgresql">
+<h2>Step 2. Install PostgreSQL<a class="headerlink" href="#step-2-install-postgresql" title="Permalink to this headline">¶</a></h2>
+<p>You’ll need a modern copy of the database running on your system, either natively or in a Docker instance. We require PostgreSQL 9.3 or greater, but recommend at least 9.5 for row-level security features that we’ll use in future tutorials.</p>
+<p>If you’re already familiar with using PostgreSQL and have it installed on your system you can use the existing installation. For this tutorial we’ll describe how to use the database in Docker because database configuration is otherwise too complicated for a simple tutorial.</p>
+<p>If Docker is not installed, you can get it <a class="reference external" href="https://www.docker.com/community-edition#download">here</a>. Next, let’s pull and start the database image:</p>
+<div class="highlight-bash"><div class="highlight"><pre><span></span>sudo docker run --name tutorial -p <span class="m">5432</span>:5432 <span class="se">\</span>
+                -e <span class="nv">POSTGRES_PASSWORD</span><span class="o">=</span>mysecretpassword <span class="se">\</span>
+                -d postgres
+</pre></div>
+</div>
+<p>This will run the Docker instance as a daemon and expose port 5432 to the host system so that it looks like an ordinary PostgreSQL server to the rest of the system.</p>
+</div>
+<div class="section" id="step-3-install-postgrest">
+<h2>Step 3. Install PostgREST<a class="headerlink" href="#step-3-install-postgrest" title="Permalink to this headline">¶</a></h2>
+<p>PostgREST is distributed as a single binary, with versions compiled for major distributions of Linux/BSD/Windows. Visit the <a class="reference external" href="https://github.com/begriffs/postgrest/releases/latest">latest release</a> for a list of downloads. In the event that your platform is not among those already pre-built, see <a class="reference internal" href="../install.html#build-source"><span class="std std-ref">Build from Source</span></a> for instructions how to build it yourself. Also let us know to add your platform in the next release.</p>
+<p>The pre-built binaries for download are <code class="code docutils literal"><span class="pre">.tar.xz</span></code> compressed files (except Windows which is a zip file). To extract the binary, go into the terminal and run</p>
+<div class="highlight-bash"><div class="highlight"><pre><span></span><span class="c1"># download from https://github.com/begriffs/postgrest/releases/latest</span>
+
+tar xfJ postgrest-&lt;version&gt;-&lt;platform&gt;.tar.xz
+</pre></div>
+</div>
+<p>The result will be a file named simply <code class="code docutils literal"><span class="pre">postgrest</span></code> (or <code class="code docutils literal"><span class="pre">postgrest.exe</span></code> on Windows). At this point try running it with</p>
+<div class="highlight-bash"><div class="highlight"><pre><span></span>./postgrest
+</pre></div>
+</div>
+<p>If everything is working correctly it will print out its version and information about configuration. You can continue to run this binary from where you downloaded it, or copy it to a system directory like <code class="code docutils literal"><span class="pre">/usr/local/bin</span></code> on Linux so that you will be able to run it from any directory.</p>
+<div class="admonition note">
+<p class="first admonition-title">Note</p>
+<p>PostgREST requires libpq, the PostgreSQL C library, to be installed on your system. Without the library you’ll get an error like “error while loading shared libraries: libpq.so.5.” Here’s how to fix it:</p>
+<div class="last"><p>
+<details>
+  <summary>Ubuntu or Debian</summary>
+  <div class="highlight-bash"><div class="highlight">
+    <pre>sudo apt-get install libpq-dev</pre>
+  </div></div>
+</details>
+<details>
+  <summary>Fedora, CentOS, or Red Hat</summary>
+  <div class="highlight-bash"><div class="highlight">
+    <pre>sudo yum install postgresql-libs</pre>
+  </div></div>
+</details>
+<details>
+  <summary>OS X</summary>
+  <div class="highlight-bash"><div class="highlight">
+    <pre>brew install postgresql</pre>
+  </div></div>
+</details>
+<details>
+  <summary>Windows</summary>
+    <p>All of the DLL files that are required to run PostgREST are available in the windows installation of PostgreSQL server.
+    Once installed they are found in the BIN folder, e.g: C:\Program Files\PostgreSQL\10\bin. Add this directory to your PATH
+    variable. Run the following from an administrative command prompt (adjusting the actual BIN path as necessary of course)
+      <pre>setx /m PATH "%PATH%;C:\Program Files\PostgreSQL\10\bin"</pre>
+    </p>
+</details>
+</p></div></div>
+</div>
+<div class="section" id="step-4-create-database-for-api">
+<h2>Step 4. Create Database for API<a class="headerlink" href="#step-4-create-database-for-api" title="Permalink to this headline">¶</a></h2>
+<p>Connect to the SQL console (psql) inside the container. To do so, run this from your command line:</p>
+<div class="highlight-bash"><div class="highlight"><pre><span></span>sudo docker <span class="nb">exec</span> -it tutorial psql -U postgres
+</pre></div>
+</div>
+<p>You should see the psql command prompt:</p>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="n">psql</span> <span class="p">(</span><span class="mf">9.6</span><span class="o">.</span><span class="mi">3</span><span class="p">)</span>
+<span class="n">Type</span> <span class="s2">&quot;help&quot;</span> <span class="k">for</span> <span class="n">help</span><span class="o">.</span>
+
+<span class="n">postgres</span><span class="o">=</span><span class="c1">#</span>
+</pre></div>
+</div>
+<p>The first thing we’ll do is create a <a class="reference external" href="https://www.postgresql.org/docs/current/static/ddl-schemas.html">named schema</a> for the database objects which will be exposed in the API. We can choose any name we like, so how about “api.” Execute this and the other SQL statements inside the psql prompt you started.</p>
+<div class="highlight-postgres"><div class="highlight"><pre><span></span><span class="k">create</span> <span class="k">schema</span> <span class="n">api</span><span class="p">;</span>
+</pre></div>
+</div>
+<p>Our API will have one endpoint, <code class="code docutils literal"><span class="pre">/todos</span></code>, which will come from a table.</p>
+<div class="highlight-postgres"><div class="highlight"><pre><span></span><span class="k">create</span> <span class="k">table</span> <span class="n">api</span><span class="mf">.</span><span class="n">todos</span> <span class="p">(</span>
+  <span class="n">id</span> <span class="nb">serial</span> <span class="k">primary</span> <span class="k">key</span><span class="p">,</span>
+  <span class="n">done</span> <span class="nb">boolean</span> <span class="k">not</span> <span class="k">null</span> <span class="k">default</span> <span class="k">false</span><span class="p">,</span>
+  <span class="n">task</span> <span class="nb">text</span> <span class="k">not</span> <span class="k">null</span><span class="p">,</span>
+  <span class="n">due</span> <span class="nb">timestamptz</span>
+<span class="p">);</span>
+
+<span class="k">insert</span> <span class="k">into</span> <span class="n">api</span><span class="mf">.</span><span class="n">todos</span> <span class="p">(</span><span class="n">task</span><span class="p">)</span> <span class="k">values</span>
+  <span class="p">(</span><span class="s1">&#39;finish tutorial 0&#39;</span><span class="p">),</span> <span class="p">(</span><span class="s1">&#39;pat self on back&#39;</span><span class="p">);</span>
+</pre></div>
+</div>
+<p>Next make a role to use for anonymous web requests. When a request comes in, PostgREST will switch into this role in the database to run queries.</p>
+<div class="highlight-postgres"><div class="highlight"><pre><span></span><span class="k">create</span> <span class="k">role</span> <span class="n">web_anon</span> <span class="n">nologin</span><span class="p">;</span>
+<span class="k">grant</span> <span class="n">web_anon</span> <span class="k">to</span> <span class="n">postgres</span><span class="p">;</span>
+
+<span class="k">grant</span> <span class="n">usage</span> <span class="k">on</span> <span class="k">schema</span> <span class="n">api</span> <span class="k">to</span> <span class="n">web_anon</span><span class="p">;</span>
+<span class="k">grant</span> <span class="k">select</span> <span class="k">on</span> <span class="n">api</span><span class="mf">.</span><span class="n">todos</span> <span class="k">to</span> <span class="n">web_anon</span><span class="p">;</span>
+</pre></div>
+</div>
+<p>The <code class="code docutils literal"><span class="pre">web_anon</span></code> role has permission to access things in the <code class="code docutils literal"><span class="pre">api</span></code> schema, and to read rows in the <code class="code docutils literal"><span class="pre">todos</span></code> table.</p>
+<p>Now quit out of psql; it’s time to start the API!</p>
+<div class="highlight-psql"><div class="highlight"><pre><span></span><span class="kp">\q</span>
+</pre></div>
+</div>
+</div>
+<div class="section" id="step-5-run-postgrest">
+<h2>Step 5. Run PostgREST<a class="headerlink" href="#step-5-run-postgrest" title="Permalink to this headline">¶</a></h2>
+<p>PostgREST uses a configuration file to tell it how to connect to the database. Create a file <code class="code docutils literal"><span class="pre">tutorial.conf</span></code> with this inside:</p>
+<div class="highlight-ini"><div class="highlight"><pre><span></span><span class="na">db-uri</span> <span class="o">=</span> <span class="s">&quot;postgres://postgres:mysecretpassword@localhost/postgres&quot;</span>
+<span class="na">db-schema</span> <span class="o">=</span> <span class="s">&quot;api&quot;</span>
+<span class="na">db-anon-role</span> <span class="o">=</span> <span class="s">&quot;web_anon&quot;</span>
+</pre></div>
+</div>
+<p>The configuration file has other <a class="reference internal" href="../install.html#configuration"><span class="std std-ref">options</span></a>, but this is all we need. Now run the server:</p>
+<div class="highlight-bash"><div class="highlight"><pre><span></span>./postgrest tutorial.conf
+</pre></div>
+</div>
+<p>You should see</p>
+<div class="highlight-text"><div class="highlight"><pre><span></span>Listening on port 3000
+Attempting to connect to the database...
+Connection successful
+</pre></div>
+</div>
+<p>It’s now ready to serve web requests. There are many nice graphical API exploration tools you can use, but for this tutorial we’ll use <code class="code docutils literal"><span class="pre">curl</span></code> because it’s likely to be installed on your system already. Open a new terminal (leaving the one open that PostgREST is running inside). Try doing an HTTP request for the todos.</p>
+<div class="highlight-bash"><div class="highlight"><pre><span></span>curl http://localhost:3000/todos
+</pre></div>
+</div>
+<p>The API replies:</p>
+<div class="highlight-json"><div class="highlight"><pre><span></span><span class="p">[</span>
+  <span class="p">{</span>
+    <span class="nt">&quot;id&quot;</span><span class="p">:</span> <span class="mi">1</span><span class="p">,</span>
+    <span class="nt">&quot;done&quot;</span><span class="p">:</span> <span class="kc">false</span><span class="p">,</span>
+    <span class="nt">&quot;task&quot;</span><span class="p">:</span> <span class="s2">&quot;finish tutorial 0&quot;</span><span class="p">,</span>
+    <span class="nt">&quot;due&quot;</span><span class="p">:</span> <span class="kc">null</span>
+  <span class="p">},</span>
+  <span class="p">{</span>
+    <span class="nt">&quot;id&quot;</span><span class="p">:</span> <span class="mi">2</span><span class="p">,</span>
+    <span class="nt">&quot;done&quot;</span><span class="p">:</span> <span class="kc">false</span><span class="p">,</span>
+    <span class="nt">&quot;task&quot;</span><span class="p">:</span> <span class="s2">&quot;pat self on back&quot;</span><span class="p">,</span>
+    <span class="nt">&quot;due&quot;</span><span class="p">:</span> <span class="kc">null</span>
+  <span class="p">}</span>
+<span class="p">]</span>
+</pre></div>
+</div>
+<p>With the current role permissions, anonymous requests have read-only access to the <code class="code docutils literal"><span class="pre">todos</span></code> table. If we try to add a new todo we are not able.</p>
+<div class="highlight-bash"><div class="highlight"><pre><span></span>curl http://localhost:3000/todos -X POST <span class="se">\</span>
+     -H <span class="s2">&quot;Content-Type: application/json&quot;</span> <span class="se">\</span>
+     -d <span class="s1">&#39;{&quot;task&quot;: &quot;do bad thing&quot;}&#39;</span>
+</pre></div>
+</div>
+<p>Response is 401 Unauthorized:</p>
+<div class="highlight-json"><div class="highlight"><pre><span></span><span class="p">{</span>
+  <span class="nt">&quot;hint&quot;</span><span class="p">:</span> <span class="kc">null</span><span class="p">,</span>
+  <span class="nt">&quot;details&quot;</span><span class="p">:</span> <span class="kc">null</span><span class="p">,</span>
+  <span class="nt">&quot;code&quot;</span><span class="p">:</span> <span class="s2">&quot;42501&quot;</span><span class="p">,</span>
+  <span class="nt">&quot;message&quot;</span><span class="p">:</span> <span class="s2">&quot;permission denied for relation todos&quot;</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+<p>There we have it, a basic API on top of the database! In the next tutorials we will see how to extend the example with more sophisticated user access controls, and more tables and queries.</p>
+<p>Now that you have PostgREST running, try the next tutorial, <a class="reference internal" href="tut1.html#tut1"><span class="std std-ref">Tutorial 1 - The Golden Key</span></a></p>
+</div>
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+  <h3><a href="../index.html">Table Of Contents</a></h3>
+  <ul>
+<li><a class="reference internal" href="#">Tutorial 0 - Get it Running</a><ul>
+<li><a class="reference internal" href="#step-1-relax-we-ll-help">Step 1. Relax, we’ll help</a></li>
+<li><a class="reference internal" href="#step-2-install-postgresql">Step 2. Install PostgreSQL</a></li>
+<li><a class="reference internal" href="#step-3-install-postgrest">Step 3. Install PostgREST</a></li>
+<li><a class="reference internal" href="#step-4-create-database-for-api">Step 4. Create Database for API</a></li>
+<li><a class="reference internal" href="#step-5-run-postgrest">Step 5. Run PostgREST</a></li>
+</ul>
+</li>
+</ul>
+
+  <h4>Previous topic</h4>
+  <p class="topless"><a href="../intro.html"
+                        title="previous chapter">Motivation</a></p>
+  <h4>Next topic</h4>
+  <p class="topless"><a href="tut1.html"
+                        title="next chapter">Tutorial 1 - The Golden Key</a></p>
+  <div role="note" aria-label="source link">
+    <h3>This Page</h3>
+    <ul class="this-page-menu">
+      <li><a href="../_sources/tutorials/tut0.rst.txt"
+            rel="nofollow">Show Source</a></li>
+    </ul>
+   </div>
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <form class="search" action="../search.html" method="get">
+      <div><input type="text" name="q" /></div>
+      <div><input type="submit" value="Go" /></div>
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="tut1.html" title="Tutorial 1 - The Golden Key"
+             >next</a> |</li>
+        <li class="right" >
+          <a href="../intro.html" title="Motivation"
+             >previous</a> |</li>
+        <li class="nav-item nav-item-0"><a href="../index.html">PostgREST 5.0.0 documentation</a> &#187;</li> 
+      </ul>
+    </div>
+    <div class="footer" role="contentinfo">
+        &#169; Copyright 2017, Joe Nelson.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.6.7.
+    </div>
+  </body>
+</html>

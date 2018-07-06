@@ -1,0 +1,560 @@
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <title>Binary Release &#8212; PostgREST 5.0.0 documentation</title>
+    <link rel="stylesheet" href="_static/classic.css" type="text/css" />
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    <link rel="stylesheet" href="_static/css/custom.css" type="text/css" />
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    './',
+        VERSION:     '5.0.0',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true,
+        SOURCELINK_SUFFIX: '.txt'
+      };
+    </script>
+    <script type="text/javascript" src="_static/jquery.js"></script>
+    <script type="text/javascript" src="_static/underscore.js"></script>
+    <script type="text/javascript" src="_static/doctools.js"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="Tables and Views" href="api.html" />
+    <link rel="prev" title="Tutorial 1 - The Golden Key" href="tutorials/tut1.html" /> 
+  </head>
+  <body>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="api.html" title="Tables and Views"
+             accesskey="N">next</a> |</li>
+        <li class="right" >
+          <a href="tutorials/tut1.html" title="Tutorial 1 - The Golden Key"
+             accesskey="P">previous</a> |</li>
+        <li class="nav-item nav-item-0"><a href="index.html">PostgREST 5.0.0 documentation</a> &#187;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <div class="section" id="binary-release">
+<h1>Binary Release<a class="headerlink" href="#binary-release" title="Permalink to this headline">¶</a></h1>
+<p>[ <a class="reference external" href="https://github.com/begriffs/postgrest/releases/latest">Download from release page</a> ]</p>
+<p>The release page has pre-compiled binaries for Mac OS X, Windows, and several Linux distributions. Extract the tarball and run the binary inside with the <code class="code docutils literal"><span class="pre">--help</span></code> flag to see usage instructions:</p>
+<div class="highlight-bash"><div class="highlight"><pre><span></span><span class="c1"># Untar the release (available at https://github.com/begriffs/postgrest/releases/latest)</span>
+
+$ tar Jxf postgrest-<span class="o">[</span>version<span class="o">]</span>-<span class="o">[</span>platform<span class="o">]</span>.tar.xz
+
+<span class="c1"># Try running it</span>
+$ ./postgrest --help
+
+<span class="c1"># You should see a usage help message</span>
+</pre></div>
+</div>
+<div class="admonition note">
+<p class="first admonition-title">Note</p>
+<p>If you see a dialog box like this on Windows, it may be that the <code class="code docutils literal"><span class="pre">pg_config</span></code> program is not in your system path.</p>
+<img alt="_images/win-err-dialog.png" src="_images/win-err-dialog.png" />
+<p class="last">It usually lives in <code class="code docutils literal"><span class="pre">C:\Program</span> <span class="pre">Files\PostgreSQL\&lt;version&gt;\bin</span></code>. See this <a class="reference external" href="https://www.howtogeek.com/118594/how-to-edit-your-system-path-for-easy-command-line-access/">article</a> about how to modify the system path.</p>
+</div>
+</div>
+<div class="section" id="postgresql-dependency">
+<h1>PostgreSQL dependency<a class="headerlink" href="#postgresql-dependency" title="Permalink to this headline">¶</a></h1>
+<p>To use PostgREST you will need an underlying database (PostgreSQL version 9.5 or greater is required). You can use something like Amazon <a class="reference external" href="https://aws.amazon.com/rds/">RDS</a> but installing your own locally is cheaper and more convenient for development.</p>
+<ul class="simple">
+<li><a class="reference external" href="http://exponential.io/blog/2015/02/21/install-postgresql-on-mac-os-x-via-brew/">Instructions for OS X</a></li>
+<li><a class="reference external" href="https://www.digitalocean.com/community/tutorials/how-to-install-and-use-postgresql-on-ubuntu-14-04">Instructions for Ubuntu 14.04</a></li>
+<li><a class="reference external" href="http://www.enterprisedb.com/products-services-training/pgdownload#windows">Installer for Windows</a></li>
+</ul>
+<p>On Windows, PostgREST will fail to run unless the PostgreSQL binaries are on the system path. To test whether this is the case, run <code class="docutils literal"><span class="pre">pg_config</span></code> from the command line. You should see it output a list of paths.</p>
+</div>
+<div class="section" id="configuration">
+<span id="id1"></span><h1>Configuration<a class="headerlink" href="#configuration" title="Permalink to this headline">¶</a></h1>
+<p>The PostgREST server reads a configuration file to determine information about the database and how to serve client requests. There is no predefined location for this file, you must specify the file path as the one and only argument to the server:</p>
+<div class="code bash highlight-default"><div class="highlight"><pre><span></span><span class="n">postgrest</span> <span class="o">/</span><span class="n">path</span><span class="o">/</span><span class="n">to</span><span class="o">/</span><span class="n">postgrest</span><span class="o">.</span><span class="n">conf</span>
+</pre></div>
+</div>
+<p>The file must contain a set of key value pairs. At minimum you must include these keys:</p>
+<div class="code highlight-default"><div class="highlight"><pre><span></span><span class="c1"># postgrest.conf</span>
+
+<span class="c1"># The standard connection URI format, documented at</span>
+<span class="c1"># https://www.postgresql.org/docs/current/static/libpq-connect.html#AEN45347</span>
+<span class="n">db</span><span class="o">-</span><span class="n">uri</span>       <span class="o">=</span> <span class="s2">&quot;postgres://user:pass@host:5432/dbname&quot;</span>
+
+<span class="c1"># The name of which database schema to expose to REST clients</span>
+<span class="n">db</span><span class="o">-</span><span class="n">schema</span>    <span class="o">=</span> <span class="s2">&quot;api&quot;</span>
+
+<span class="c1"># The database role to use when no client authentication is provided.</span>
+<span class="c1"># Can (and probably should) differ from user in db-uri</span>
+<span class="n">db</span><span class="o">-</span><span class="n">anon</span><span class="o">-</span><span class="n">role</span> <span class="o">=</span> <span class="s2">&quot;anon&quot;</span>
+</pre></div>
+</div>
+<p>The user specified in the db-uri is also known as the authenticator role. For more information about the anonymous vs authenticator roles see the <a class="reference internal" href="auth.html#roles"><span class="std std-ref">Overview of Role System</span></a>.</p>
+<p>Here is the full list of configuration parameters.</p>
+<table border="1" class="docutils">
+<colgroup>
+<col width="43%" />
+<col width="16%" />
+<col width="19%" />
+<col width="22%" />
+</colgroup>
+<thead valign="bottom">
+<tr class="row-odd"><th class="head">Name</th>
+<th class="head">Type</th>
+<th class="head">Default</th>
+<th class="head">Required</th>
+</tr>
+</thead>
+<tbody valign="top">
+<tr class="row-even"><td>db-uri</td>
+<td>String</td>
+<td>&#160;</td>
+<td>Y</td>
+</tr>
+<tr class="row-odd"><td>db-schema</td>
+<td>String</td>
+<td>&#160;</td>
+<td>Y</td>
+</tr>
+<tr class="row-even"><td>db-anon-role</td>
+<td>String</td>
+<td>&#160;</td>
+<td>Y</td>
+</tr>
+<tr class="row-odd"><td>db-pool</td>
+<td>Int</td>
+<td>10</td>
+<td>&#160;</td>
+</tr>
+<tr class="row-even"><td>server-host</td>
+<td>String</td>
+<td>*4</td>
+<td>&#160;</td>
+</tr>
+<tr class="row-odd"><td>server-port</td>
+<td>Int</td>
+<td>3000</td>
+<td>&#160;</td>
+</tr>
+<tr class="row-even"><td>server-proxy-uri</td>
+<td>String</td>
+<td>&#160;</td>
+<td>&#160;</td>
+</tr>
+<tr class="row-odd"><td>jwt-secret</td>
+<td>String</td>
+<td>&#160;</td>
+<td>&#160;</td>
+</tr>
+<tr class="row-even"><td>jwt-aud</td>
+<td>String</td>
+<td>&#160;</td>
+<td>&#160;</td>
+</tr>
+<tr class="row-odd"><td>secret-is-base64</td>
+<td>Bool</td>
+<td>False</td>
+<td>&#160;</td>
+</tr>
+<tr class="row-even"><td>max-rows</td>
+<td>Int</td>
+<td>∞</td>
+<td>&#160;</td>
+</tr>
+<tr class="row-odd"><td>pre-request</td>
+<td>String</td>
+<td>&#160;</td>
+<td>&#160;</td>
+</tr>
+<tr class="row-even"><td>app.settings.*</td>
+<td>String</td>
+<td>&#160;</td>
+<td>&#160;</td>
+</tr>
+<tr class="row-odd"><td>role-claim-key</td>
+<td>String</td>
+<td>.role</td>
+<td>&#160;</td>
+</tr>
+</tbody>
+</table>
+<dl class="docutils">
+<dt>db-uri</dt>
+<dd><p class="first">The standard connection PostgreSQL <a class="reference external" href="https://www.postgresql.org/docs/current/static/libpq-connect.html#AEN45347">URI format</a>. Symbols and unusual characters in the password or other fields should be percent encoded to avoid a parse error. If enforcing an SSL connection to the database is required you can use <a class="reference external" href="https://www.postgresql.org/docs/9.1/static/libpq-ssl.html#LIBPQ-SSL-SSLMODE-STATEMENTS">sslmode</a> in the URI, for example <code class="docutils literal"><span class="pre">postgres://user:pass&#64;host:5432/dbname?sslmode=require</span></code>.</p>
+<p>When running PostgREST on the same machine as PostgreSQL, it is also possible to connect to the database using a <a class="reference external" href="https://en.wikipedia.org/wiki/Unix_domain_socket">Unix socket</a> and the <a class="reference external" href="http://www.postgresql.org/docs/current/static/auth-methods.html#AUTH-PEER">Peer Authentication method</a> as an alternative to TCP/IP communication and authentication with a password, this also grants higher performance.  To do this you can omit the host and the password, e.g. <code class="docutils literal"><span class="pre">postgres://user&#64;/dbname</span></code>, see the <a class="reference external" href="https://www.postgresql.org/docs/10/static/libpq-connect.html#LIBPQ-CONNSTRING">libpq connection string</a> documentation for more details.</p>
+<p class="last">On older systems like Centos 6, with older versions of libpq, a different db-uri syntax has to be used. In this case the URI is a string of space separated key-value pairs (key=value), so the example above would be <code class="code docutils literal"><span class="pre">&quot;host=host</span> <span class="pre">user=user</span> <span class="pre">port=5432</span> <span class="pre">dbname=dbname</span> <span class="pre">password=pass&quot;</span></code>.</p>
+</dd>
+<dt>db-schema</dt>
+<dd>The database schema to expose to REST clients. Tables, views and stored procedures in this schema will get API endpoints.</dd>
+<dt>db-anon-role</dt>
+<dd>The database role to use when executing commands on behalf of unauthenticated clients.</dd>
+<dt>db-pool</dt>
+<dd>Number of connections to keep open in PostgREST’s database pool. Having enough here for the maximum expected simultaneous client connections can improve performance. Note it’s pointless to set this higher than the <code class="code docutils literal"><span class="pre">max_connections</span></code> GUC in your database.</dd>
+<dt>server-host</dt>
+<dd><p class="first">Where to bind the PostgREST web server. In addition to the usual address options, PostgREST interprets these reserved addresses with special meanings:</p>
+<ul class="last simple">
+<li><code class="code docutils literal"><span class="pre">*</span></code> - any IPv4 or IPv6 hostname</li>
+<li><code class="code docutils literal"><span class="pre">*4</span></code> - any IPv4 or IPv6 hostname, IPv4 preferred</li>
+<li><code class="code docutils literal"><span class="pre">!4</span></code> - any IPv4 hostname</li>
+<li><code class="code docutils literal"><span class="pre">*6</span></code> - any IPv4 or IPv6 hostname, IPv6 preferred</li>
+<li><code class="code docutils literal"><span class="pre">!6</span></code> - any IPv6 hostname</li>
+</ul>
+</dd>
+<dt>server-port</dt>
+<dd>The port to bind the web server.</dd>
+<dt>server-proxy-uri</dt>
+<dd>Overrides the base URL used within the OpenAPI self-documentation hosted at the API root path. Use a complete URI syntax <code class="code docutils literal"><span class="pre">scheme:[//[user:password&#64;]host[:port]][/]path[?query][#fragment]</span></code>. Ex. <code class="code docutils literal"><span class="pre">https://postgrest.com</span></code></dd>
+</dl>
+<div class="code json highlight-default"><div class="highlight"><pre><span></span><span class="p">{</span>
+  <span class="s2">&quot;swagger&quot;</span><span class="p">:</span> <span class="s2">&quot;2.0&quot;</span><span class="p">,</span>
+  <span class="s2">&quot;info&quot;</span><span class="p">:</span> <span class="p">{</span>
+    <span class="s2">&quot;version&quot;</span><span class="p">:</span> <span class="s2">&quot;0.4.3.0&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;title&quot;</span><span class="p">:</span> <span class="s2">&quot;PostgREST API&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;description&quot;</span><span class="p">:</span> <span class="s2">&quot;This is a dynamic API generated by PostgREST&quot;</span>
+  <span class="p">},</span>
+  <span class="s2">&quot;host&quot;</span><span class="p">:</span> <span class="s2">&quot;postgrest.com:443&quot;</span><span class="p">,</span>
+  <span class="s2">&quot;basePath&quot;</span><span class="p">:</span> <span class="s2">&quot;/&quot;</span><span class="p">,</span>
+  <span class="s2">&quot;schemes&quot;</span><span class="p">:</span> <span class="p">[</span>
+    <span class="s2">&quot;https&quot;</span>
+  <span class="p">]</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+<dl class="docutils">
+<dt>jwt-secret</dt>
+<dd>The secret or <a class="reference external" href="https://tools.ietf.org/html/rfc7517">JSON Web Key (JWK)</a> used to decode JWT tokens clients provide for authentication. For security the key must be at least thirty-two characters long. If this parameter is not specified then PostgREST refuses authentication requests. Choosing a value for this parameter beginning with the at sign such as <code class="code docutils literal"><span class="pre">&#64;filename</span></code> loads the secret out of an external file. This is useful for automating deployments. Note that any binary secrets must be base64 encoded. Both symmetric and asymmetric cryptography are supported. For more info see <a class="reference internal" href="auth.html#asym-keys"><span class="std std-ref">Asymmetric Keys</span></a>.</dd>
+<dt>jwt-aud</dt>
+<dd>Specifies the <a class="reference external" href="https://tools.ietf.org/html/rfc7519#section-4.1.3">JWT audience claim</a>. If this claim is present in the client provided JWT then you must set this to the same value as in the JWT, otherwise verifying the JWT will fail.</dd>
+<dt>secret-is-base64</dt>
+<dd>When this is set to <code class="code docutils literal"><span class="pre">true</span></code>, the value derived from <code class="code docutils literal"><span class="pre">jwt-secret</span></code> will be treated as a base64 encoded secret.</dd>
+<dt>max-rows</dt>
+<dd>A hard limit to the number of rows PostgREST will fetch from a view, table, or stored procedure. Limits payload size for accidental or malicious requests.</dd>
+<dt>pre-request</dt>
+<dd>A schema-qualified stored procedure name to call right after switching roles for a client request. This provides an opportunity to modify SQL variables or raise an exception to prevent the request from completing.</dd>
+<dt>app.settings.*</dt>
+<dd>Arbitrary settings that will become database session settings. This can be used to pass in secret keys directly as strings, or via OS environment variables. For instance: <code class="code docutils literal"><span class="pre">app.settings.jwt_secret</span> <span class="pre">=</span> <span class="pre">&quot;$(MYAPP_JWT_SECRET)&quot;</span></code> will take <code class="code docutils literal"><span class="pre">MYAPP_JWT_SECRET</span></code> from the environment and make it available to postgresql functions as <code class="code docutils literal"><span class="pre">current_setting('app.settings.jwt_secret')</span></code>.</dd>
+<dt>role-claim-key</dt>
+<dd>A JSPath DSL that specifies the location of the <code class="code docutils literal"><span class="pre">role</span></code> key in the JWT claims. This can be used to consume a JWT provided by a third party service like Auth0, Okta or Keycloak. Usage examples:</dd>
+</dl>
+<div class="code bash highlight-default"><div class="highlight"><pre><span></span><span class="c1"># {&quot;postgrest&quot;:{&quot;roles&quot;: [&quot;other&quot;, &quot;author&quot;]}}</span>
+<span class="c1"># the DSL accepts characters that are alphanumerical or one of &quot;_$@&quot; as keys</span>
+<span class="n">role</span><span class="o">-</span><span class="n">claim</span><span class="o">-</span><span class="n">key</span> <span class="o">=</span> <span class="s2">&quot;.postgrest.roles[1]&quot;</span>
+
+<span class="c1"># {&quot;https://www.example.com/role&quot;: { &quot;key&quot;: &quot;author }}</span>
+<span class="c1"># non-alphanumerical characters can go inside quotes(escaped in the config value)</span>
+<span class="n">role</span><span class="o">-</span><span class="n">claim</span><span class="o">-</span><span class="n">key</span> <span class="o">=</span> <span class="s2">&quot;.</span><span class="se">\&quot;</span><span class="s2">https://www.example.com/role</span><span class="se">\&quot;</span><span class="s2">.key&quot;</span>
+</pre></div>
+</div>
+<div class="section" id="running-the-server">
+<h2>Running the Server<a class="headerlink" href="#running-the-server" title="Permalink to this headline">¶</a></h2>
+<p>PostgREST outputs basic request logging to stdout. When running it in an SSH session you must detach it from stdout or it will be terminated when the session closes. The easiest technique is redirecting the output to a log file or to the syslog:</p>
+<div class="highlight-bash"><div class="highlight"><pre><span></span>ssh foo@example.com <span class="se">\</span>
+  <span class="s1">&#39;postgrest foo.conf &lt;/dev/null &gt;/var/log/postgrest.log 2&gt;&amp;1 &amp;&#39;</span>
+
+<span class="c1"># another option is to pipe the output into &quot;logger -t postgrest&quot;</span>
+</pre></div>
+</div>
+<p>(Avoid <code class="code docutils literal"><span class="pre">nohup</span> <span class="pre">postgrest</span></code> because the HUP signal is used for manual <a class="reference internal" href="admin.html#schema-reloading"><span class="std std-ref">Schema Reloading</span></a>.)</p>
+</div>
+</div>
+<div class="section" id="docker">
+<h1>Docker<a class="headerlink" href="#docker" title="Permalink to this headline">¶</a></h1>
+<p>The official PostgREST Docker image consults an internal <code class="code docutils literal"><span class="pre">/etc/postgrest.conf</span></code> file. To customize this file you can either mount a replacement configuration file into the container, or use environment variables. The environment variables will be interpolated into the default config file.</p>
+<p>These variables match the options shown in our <a class="reference internal" href="#configuration"><span class="std std-ref">Configuration</span></a> section, except they are capitalized, have a prefix, and use underscores. To get a list of the available environment variables, run this:</p>
+<div class="highlight-bash"><div class="highlight"><pre><span></span>docker inspect -f <span class="s2">&quot;{{.Config.Env}}&quot;</span> postgrest/postgrest
+</pre></div>
+</div>
+<p>There are two ways to run the PostgREST container: with an existing external database, or through docker-compose.</p>
+<div class="section" id="containerized-postgrest-with-native-postgresql">
+<h2>Containerized PostgREST with native PostgreSQL<a class="headerlink" href="#containerized-postgrest-with-native-postgresql" title="Permalink to this headline">¶</a></h2>
+<p>The first way to run PostgREST in Docker is to connect it to an existing native database on the host.</p>
+<div class="highlight-bash"><div class="highlight"><pre><span></span><span class="c1"># Pull the official image</span>
+docker pull postgrest/postgrest
+
+<span class="c1"># Run the server</span>
+docker run --rm --net<span class="o">=</span>host -p <span class="m">3000</span>:3000 <span class="se">\</span>
+  -e <span class="nv">PGRST_DB_URI</span><span class="o">=</span><span class="s2">&quot;postgres://postgres@localhost/postgres&quot;</span> <span class="se">\</span>
+  -e <span class="nv">PGRST_DB_ANON_ROLE</span><span class="o">=</span><span class="s2">&quot;postgres&quot;</span> <span class="se">\</span>
+  postgrest/postgrest
+</pre></div>
+</div>
+<p>The database connection string above is just an example. Adjust the role and password as necessary. You may need to edit PostgreSQL’s <code class="code docutils literal"><span class="pre">pg_hba.conf</span></code> to grant the user local login access.</p>
+<div class="admonition note">
+<p class="first admonition-title">Note</p>
+<p>Docker on Mac does not support the <code class="code docutils literal"><span class="pre">--net=host</span></code> flag. Instead you’ll need to create an IP address alias to the host. Requests for the IP address from inside the container are unable to resolve and fall back to resolution by the host.</p>
+<div class="highlight-bash"><div class="highlight"><pre><span></span>sudo ifconfig lo0 <span class="m">10</span>.0.0.10 <span class="nb">alias</span>
+</pre></div>
+</div>
+<p>You should then use 10.0.0.10 as the host in your database connection string. Also remember to include the IP address in the <code class="code docutils literal"><span class="pre">listen_address</span></code> within postgresql.conf. For instance:</p>
+<div class="last highlight-bash"><div class="highlight"><pre><span></span><span class="nv">listen_addresses</span> <span class="o">=</span> <span class="s1">&#39;localhost,10.0.0.10&#39;</span>
+</pre></div>
+</div>
+</div>
+</div>
+<div class="section" id="containerized-postgrest-and-db-with-docker-compose">
+<h2>Containerized PostgREST <em>and</em> db with docker-compose<a class="headerlink" href="#containerized-postgrest-and-db-with-docker-compose" title="Permalink to this headline">¶</a></h2>
+<p>To avoid having to install the database at all, you can run both it and the server in containers and link them together with docker-compose. Use this configuration:</p>
+<div class="highlight-yaml"><div class="highlight"><pre><span></span><span class="c1"># docker-compose.yml</span>
+
+<span class="l l-Scalar l-Scalar-Plain">version</span><span class="p p-Indicator">:</span> <span class="s">&#39;3&#39;</span>
+<span class="l l-Scalar l-Scalar-Plain">services</span><span class="p p-Indicator">:</span>
+  <span class="l l-Scalar l-Scalar-Plain">server</span><span class="p p-Indicator">:</span>
+    <span class="l l-Scalar l-Scalar-Plain">image</span><span class="p p-Indicator">:</span> <span class="l l-Scalar l-Scalar-Plain">postgrest/postgrest</span>
+    <span class="l l-Scalar l-Scalar-Plain">ports</span><span class="p p-Indicator">:</span>
+      <span class="p p-Indicator">-</span> <span class="s">&quot;3000:3000&quot;</span>
+    <span class="l l-Scalar l-Scalar-Plain">links</span><span class="p p-Indicator">:</span>
+      <span class="p p-Indicator">-</span> <span class="l l-Scalar l-Scalar-Plain">db:db</span>
+    <span class="l l-Scalar l-Scalar-Plain">environment</span><span class="p p-Indicator">:</span>
+      <span class="l l-Scalar l-Scalar-Plain">PGRST_DB_URI</span><span class="p p-Indicator">:</span> <span class="l l-Scalar l-Scalar-Plain">postgres://app_user:password@db:5432/app_db</span>
+      <span class="l l-Scalar l-Scalar-Plain">PGRST_DB_SCHEMA</span><span class="p p-Indicator">:</span> <span class="l l-Scalar l-Scalar-Plain">public</span>
+      <span class="l l-Scalar l-Scalar-Plain">PGRST_DB_ANON_ROLE</span><span class="p p-Indicator">:</span> <span class="l l-Scalar l-Scalar-Plain">app_user</span> <span class="c1">#In production this role should not be the same as the one used for the connection</span>
+    <span class="l l-Scalar l-Scalar-Plain">depends_on</span><span class="p p-Indicator">:</span>
+      <span class="p p-Indicator">-</span> <span class="l l-Scalar l-Scalar-Plain">db</span>
+  <span class="l l-Scalar l-Scalar-Plain">db</span><span class="p p-Indicator">:</span>
+    <span class="l l-Scalar l-Scalar-Plain">image</span><span class="p p-Indicator">:</span> <span class="l l-Scalar l-Scalar-Plain">postgres</span>
+    <span class="l l-Scalar l-Scalar-Plain">ports</span><span class="p p-Indicator">:</span>
+      <span class="p p-Indicator">-</span> <span class="s">&quot;5432:5432&quot;</span>
+    <span class="l l-Scalar l-Scalar-Plain">environment</span><span class="p p-Indicator">:</span>
+      <span class="l l-Scalar l-Scalar-Plain">POSTGRES_DB</span><span class="p p-Indicator">:</span> <span class="l l-Scalar l-Scalar-Plain">app_db</span>
+      <span class="l l-Scalar l-Scalar-Plain">POSTGRES_USER</span><span class="p p-Indicator">:</span> <span class="l l-Scalar l-Scalar-Plain">app_user</span>
+      <span class="l l-Scalar l-Scalar-Plain">POSTGRES_PASSWORD</span><span class="p p-Indicator">:</span> <span class="l l-Scalar l-Scalar-Plain">password</span>
+  <span class="c1"># Uncomment this if you want to persist the data.</span>
+  <span class="c1"># volumes:</span>
+  <span class="c1">#   - &quot;./pgdata:/var/lib/postgresql/data&quot;</span>
+</pre></div>
+</div>
+<p>Go into the directory where you saved this file and run <code class="code docutils literal"><span class="pre">docker-compose</span> <span class="pre">up</span></code>. You will see the logs of both the database and PostgREST, and be able to access the latter on port 3000.</p>
+<p>If you want to have a visual overview of your API in your browser you can add swagger-ui to your <code class="code docutils literal"><span class="pre">docker-compose.yml</span></code>:</p>
+<div class="highlight-yaml"><div class="highlight"><pre><span></span><span class="l l-Scalar l-Scalar-Plain">swagger</span><span class="p p-Indicator">:</span>
+  <span class="l l-Scalar l-Scalar-Plain">image</span><span class="p p-Indicator">:</span> <span class="l l-Scalar l-Scalar-Plain">swaggerapi/swagger-ui</span>
+  <span class="l l-Scalar l-Scalar-Plain">ports</span><span class="p p-Indicator">:</span>
+    <span class="p p-Indicator">-</span> <span class="s">&quot;8080:8080&quot;</span>
+  <span class="l l-Scalar l-Scalar-Plain">expose</span><span class="p p-Indicator">:</span>
+    <span class="p p-Indicator">-</span> <span class="s">&quot;8080&quot;</span>
+  <span class="l l-Scalar l-Scalar-Plain">environment</span><span class="p p-Indicator">:</span>
+    <span class="l l-Scalar l-Scalar-Plain">API_URL</span><span class="p p-Indicator">:</span> <span class="l l-Scalar l-Scalar-Plain">http://localhost:3000/</span>
+</pre></div>
+</div>
+<p>With this you can see the swagger-ui in your browser on port 8080.</p>
+</div>
+</div>
+<div class="section" id="build-from-source">
+<span id="build-source"></span><h1>Build from Source<a class="headerlink" href="#build-from-source" title="Permalink to this headline">¶</a></h1>
+<div class="admonition note">
+<p class="first admonition-title">Note</p>
+<p class="last">We discourage building and using PostgREST on <strong>Alpine Linux</strong> because of a reported GHC memory leak on that platform.</p>
+</div>
+<p>When a pre-built binary does not exist for your system you can build the project from source. You’ll also need to do this if you want to help with development. <a class="reference external" href="https://github.com/commercialhaskell/stack">Stack</a> makes it easy. It will install any necessary Haskell dependencies on your system.</p>
+<ul>
+<li><p class="first"><a class="reference external" href="http://docs.haskellstack.org/en/stable/README.html#how-to-install">Install Stack</a> for your platform</p>
+</li>
+<li><p class="first">Install Library Dependencies</p>
+<table border="1" class="docutils">
+<colgroup>
+<col width="35%" />
+<col width="65%" />
+</colgroup>
+<thead valign="bottom">
+<tr class="row-odd"><th class="head">Operating System</th>
+<th class="head">Dependencies</th>
+</tr>
+</thead>
+<tbody valign="top">
+<tr class="row-even"><td>Ubuntu/Debian</td>
+<td>libpq-dev, libgmp-dev</td>
+</tr>
+<tr class="row-odd"><td>CentOS/Fedora/Red Hat</td>
+<td>postgresql-devel, zlib-devel, gmp-devel</td>
+</tr>
+<tr class="row-even"><td>BSD</td>
+<td>postgresql95-client</td>
+</tr>
+<tr class="row-odd"><td>OS X</td>
+<td>libpq, gmp</td>
+</tr>
+</tbody>
+</table>
+</li>
+<li><p class="first">Build and install binary</p>
+<div class="highlight-bash"><div class="highlight"><pre><span></span>git clone https://github.com/begriffs/postgrest.git
+<span class="nb">cd</span> postgrest
+
+<span class="c1"># adjust local-bin-path to taste</span>
+stack build --install-ghc --copy-bins --local-bin-path /usr/local/bin
+</pre></div>
+</div>
+</li>
+</ul>
+<div class="admonition note">
+<p class="first admonition-title">Note</p>
+<p class="last">If building fails and your system has less than 1GB of memory, try adding a swap file.</p>
+</div>
+<ul class="simple">
+<li>Check that the server is installed: <code class="code docutils literal"><span class="pre">postgrest</span> <span class="pre">--help</span></code>.</li>
+</ul>
+<div class="section" id="postgrest-test-suite">
+<h2>PostgREST Test Suite<a class="headerlink" href="#postgrest-test-suite" title="Permalink to this headline">¶</a></h2>
+<div class="section" id="creating-the-test-database">
+<h3>Creating the Test Database<a class="headerlink" href="#creating-the-test-database" title="Permalink to this headline">¶</a></h3>
+<p>To properly run postgrest tests one needs to create a database. To do so, use the test creation script <code class="code docutils literal"><span class="pre">create_test_database</span></code> in the <code class="code docutils literal"><span class="pre">test/</span></code> folder.</p>
+<p>The script expects the following parameters:</p>
+<div class="code bash highlight-default"><div class="highlight"><pre><span></span><span class="n">test</span><span class="o">/</span><span class="n">create_test_db</span> <span class="n">connection_uri</span> <span class="n">database_name</span> <span class="p">[</span><span class="n">test_db_user</span><span class="p">]</span> <span class="p">[</span><span class="n">test_db_user_password</span><span class="p">]</span>
+</pre></div>
+</div>
+<p>Use the <a class="reference external" href="https://www.postgresql.org/docs/current/static/libpq-connect.html#AEN45347">connection URI</a> to specify the user, password, host, and port. Do not provide the database in the connection URI. The PostgreSQL role you are using to connect must be capable of creating new databases.</p>
+<p>The <code class="code docutils literal"><span class="pre">database_name</span></code> is the name of the database that <code class="code docutils literal"><span class="pre">stack</span> <span class="pre">test</span></code> will connect to. If the database of the same name already exists on the server, the script will first drop it and then re-create it.</p>
+<p>Optionally, specify the database user <code class="code docutils literal"><span class="pre">stack</span> <span class="pre">test</span></code> will use. The user will be given necessary permissions to reset the database after every test run.</p>
+<p>If the user is not specified, the script will generate the role name <code class="code docutils literal"><span class="pre">postgrest_test_</span></code> suffixed by the chosen database name, and will generate a random password for it.</p>
+<p>Optionally, if specifying an existing user to be used for the test connection, one can specify the password the user has.</p>
+<p>The script will return the db uri to use in the tests–this uri corresponds to the <code class="code docutils literal"><span class="pre">db-uri</span></code> parameter in the configuration file that one would use in production.</p>
+<p>Generating the user and the password allows one to create the database and run the tests against any PostgreSQL server without any modifications to the server. (Such as allowing accounts without a password or setting up trust authentication, or requiring the server to be on the same localhost the tests are run from).</p>
+</div>
+<div class="section" id="running-the-tests">
+<h3>Running the Tests<a class="headerlink" href="#running-the-tests" title="Permalink to this headline">¶</a></h3>
+<p>To run the tests, one must supply the database uri in the environment variable <code class="code docutils literal"><span class="pre">POSTGREST_TEST_CONNECTION</span></code>.</p>
+<p>Typically, one would create the database and run the test in the same command line, using the <cite>postgres</cite> superuser:</p>
+<div class="code bash highlight-default"><div class="highlight"><pre><span></span>POSTGREST_TEST_CONNECTION=$(test/create_test_db &quot;postgres://postgres:pwd@database-host&quot; test_db) stack test
+</pre></div>
+</div>
+<p>For repeated runs on the same database, one should export the connection variable:</p>
+<div class="code bash highlight-default"><div class="highlight"><pre><span></span>export POSTGREST_TEST_CONNECTION=$(test/create_test_db &quot;postgres://postgres:pwd@database-host&quot; test_db)
+stack test
+stack test
+...
+</pre></div>
+</div>
+<p>If the environment variable is empty or not specified, then the test runner will default to connection uri</p>
+<div class="code bash highlight-default"><div class="highlight"><pre><span></span><span class="n">postgres</span><span class="p">:</span><span class="o">//</span><span class="n">postgrest_test</span><span class="nd">@localhost</span><span class="o">/</span><span class="n">postgrest_test</span>
+</pre></div>
+</div>
+<p>This connection assumes the test server on the <code class="code docutils literal"><span class="pre">localhost:code:</span></code> with the user <cite>postgrest_test</cite> without the password and the database of the same name.</p>
+</div>
+<div class="section" id="destroying-the-database">
+<h3>Destroying the Database<a class="headerlink" href="#destroying-the-database" title="Permalink to this headline">¶</a></h3>
+<p>The test database will remain after the test, together with four new roles created on the PostgreSQL server. To permanently erase the created database and the roles, run the script <code class="code docutils literal"><span class="pre">test/delete_test_database</span></code>, using the same superuser role used for creating the database:</p>
+<div class="code bash highlight-default"><div class="highlight"><pre><span></span><span class="n">test</span><span class="o">/</span><span class="n">destroy_test_db</span> <span class="n">connection_uri</span> <span class="n">database_name</span>
+</pre></div>
+</div>
+</div>
+<div class="section" id="testing-with-docker">
+<h3>Testing with Docker<a class="headerlink" href="#testing-with-docker" title="Permalink to this headline">¶</a></h3>
+<p>The ability to connect to non-local PostgreSQL simplifies the test setup. One elegant way of testing is to use a disposable PostgreSQL in docker.</p>
+<p>For example, if local development is on a mac with Docker for Mac installed:</p>
+<div class="code bash highlight-default"><div class="highlight"><pre><span></span>$ docker run --name db-scripting-test -e POSTGRES_PASSWORD=pwd -p 5434:5432 -d postgres
+$ POSTGREST_TEST_CONNECTION=$(test/create_test_db &quot;postgres://postgres:pwd@localhost:5434&quot; test_db) stack test
+</pre></div>
+</div>
+<p>Additionally, if one creates a docker container to run stack test (this is necessary on Mac OS Sierra with GHC below 8.0.1, where <code class="code docutils literal"><span class="pre">stack</span> <span class="pre">test</span></code> fails), one can run PostgreSQL in a separate linked container, or use the locally installed PostgreSQL app.</p>
+<p>Build the test container with <code class="code docutils literal"><span class="pre">test/Dockerfile.test</span></code>:</p>
+<div class="code bash highlight-default"><div class="highlight"><pre><span></span>$ docker build -t pgst-test - &lt; test/Dockerfile.test
+$ mkdir .stack-work-docker ~/.stack-linux
+</pre></div>
+</div>
+<p>The first run of the test container will take a long time while the dependencies get cached. Creating the <code class="code docutils literal"><span class="pre">~/.stack-linux</span></code> folder and mapping it as a volume into the container ensures that we can run the container in disposable mode and not worry about subsequent runs being slow. <code class="code docutils literal"><span class="pre">.stack-work-docker</span></code> is also mapped into the container and must be specified when using stack from Linux, not to interfere with the <code class="code docutils literal"><span class="pre">.stack-work</span></code> for local development. (On Sierra, <code class="code docutils literal"><span class="pre">stack</span> <span class="pre">build</span></code> works, while <code class="code docutils literal"><span class="pre">stack</span> <span class="pre">test</span></code> fails with GHC 8.0.1).</p>
+<p>Linked containers:</p>
+<div class="code bash highlight-default"><div class="highlight"><pre><span></span>$ docker run --name pg -e POSTGRES_PASSWORD=pwd  -d postgres
+$ docker run --rm -it -v `pwd`:`pwd` -v ~/.stack-linux:/root/.stack --link pg:pg -w=&quot;`pwd`&quot; -v `pwd`/.stack-work-docker:`pwd`/.stack-work pgst-test bash -c &quot;POSTGREST_TEST_CONNECTION=$(test/create_test_db &quot;postgres://postgres:pwd@pg&quot; test_db) stack test&quot;
+</pre></div>
+</div>
+<p>Stack test in Docker for Mac, PostgreSQL app on mac:</p>
+<div class="code bash highlight-default"><div class="highlight"><pre><span></span>$ host_ip=$(ifconfig en0 | grep &#39;inet &#39; | cut -f 2 -d&#39; &#39;)
+$ export POSTGREST_TEST_CONNECTION=$(test/create_test_db &quot;postgres://postgres@$HOST&quot; test_db)
+$ docker run --rm -it -v `pwd`:`pwd` -v ~/.stack-linux:/root/.stack -v `pwd`/.stack-work-docker:`pwd`/.stack-work -e &quot;HOST=$host_ip&quot; -e &quot;POSTGREST_TEST_CONNECTION=$POSTGREST_TEST_CONNECTION&quot; -w=&quot;`pwd`&quot; pgst-test bash -c &quot;stack test&quot;
+$ test/destroy_test_db &quot;postgres://postgres@localhost&quot; test_db
+</pre></div>
+</div>
+</div>
+</div>
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+  <h3><a href="index.html">Table Of Contents</a></h3>
+  <ul>
+<li><a class="reference internal" href="#">Binary Release</a></li>
+<li><a class="reference internal" href="#postgresql-dependency">PostgreSQL dependency</a></li>
+<li><a class="reference internal" href="#configuration">Configuration</a><ul>
+<li><a class="reference internal" href="#running-the-server">Running the Server</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#docker">Docker</a><ul>
+<li><a class="reference internal" href="#containerized-postgrest-with-native-postgresql">Containerized PostgREST with native PostgreSQL</a></li>
+<li><a class="reference internal" href="#containerized-postgrest-and-db-with-docker-compose">Containerized PostgREST <em>and</em> db with docker-compose</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#build-from-source">Build from Source</a><ul>
+<li><a class="reference internal" href="#postgrest-test-suite">PostgREST Test Suite</a><ul>
+<li><a class="reference internal" href="#creating-the-test-database">Creating the Test Database</a></li>
+<li><a class="reference internal" href="#running-the-tests">Running the Tests</a></li>
+<li><a class="reference internal" href="#destroying-the-database">Destroying the Database</a></li>
+<li><a class="reference internal" href="#testing-with-docker">Testing with Docker</a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+
+  <h4>Previous topic</h4>
+  <p class="topless"><a href="tutorials/tut1.html"
+                        title="previous chapter">Tutorial 1 - The Golden Key</a></p>
+  <h4>Next topic</h4>
+  <p class="topless"><a href="api.html"
+                        title="next chapter">Tables and Views</a></p>
+  <div role="note" aria-label="source link">
+    <h3>This Page</h3>
+    <ul class="this-page-menu">
+      <li><a href="_sources/install.rst.txt"
+            rel="nofollow">Show Source</a></li>
+    </ul>
+   </div>
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <form class="search" action="search.html" method="get">
+      <div><input type="text" name="q" /></div>
+      <div><input type="submit" value="Go" /></div>
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="api.html" title="Tables and Views"
+             >next</a> |</li>
+        <li class="right" >
+          <a href="tutorials/tut1.html" title="Tutorial 1 - The Golden Key"
+             >previous</a> |</li>
+        <li class="nav-item nav-item-0"><a href="index.html">PostgREST 5.0.0 documentation</a> &#187;</li> 
+      </ul>
+    </div>
+    <div class="footer" role="contentinfo">
+        &#169; Copyright 2017, Joe Nelson.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.6.7.
+    </div>
+  </body>
+</html>

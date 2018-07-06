@@ -1,0 +1,294 @@
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <title>Hardening PostgREST &#8212; PostgREST 5.0.0 documentation</title>
+    <link rel="stylesheet" href="_static/classic.css" type="text/css" />
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    <link rel="stylesheet" href="_static/css/custom.css" type="text/css" />
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    './',
+        VERSION:     '5.0.0',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true,
+        SOURCELINK_SUFFIX: '.txt'
+      };
+    </script>
+    <script type="text/javascript" src="_static/jquery.js"></script>
+    <script type="text/javascript" src="_static/underscore.js"></script>
+    <script type="text/javascript" src="_static/doctools.js"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="prev" title="Overview of Role System" href="auth.html" /> 
+  </head>
+  <body>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="auth.html" title="Overview of Role System"
+             accesskey="P">previous</a> |</li>
+        <li class="nav-item nav-item-0"><a href="index.html">PostgREST 5.0.0 documentation</a> &#187;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <div class="section" id="hardening-postgrest">
+<h1>Hardening PostgREST<a class="headerlink" href="#hardening-postgrest" title="Permalink to this headline">¶</a></h1>
+<p>PostgREST is a fast way to construct a RESTful API. Its default behavior is great for scaffolding in development. When it’s time to go to production it works great too, as long as you take precautions. PostgREST is a small sharp tool that focuses on performing the API-to-database mapping. We rely on a reverse proxy like Nginx for additional safeguards.</p>
+<p>The first step is to create an Nginx configuration file that proxies requests to an underlying PostgREST server.</p>
+<div class="code nginx highlight-default"><div class="highlight"><pre><span></span>http {
+  ...
+  # upstream configuration
+  upstream postgrest {
+    server localhost:3000;
+    keepalive 64;
+  }
+  ...
+  server {
+    ...
+    # expose to the outside world
+    location /api/ {
+      default_type  application/json;
+      proxy_hide_header Content-Location;
+      add_header Content-Location  /api/$upstream_http_content_location;
+      proxy_set_header  Connection &quot;&quot;;
+      proxy_http_version 1.1;
+      proxy_pass http://postgrest/;
+    }
+    ...
+  }
+}
+</pre></div>
+</div>
+<div class="section" id="block-full-table-operations">
+<span id="block-fulltable"></span><h2>Block Full-Table Operations<a class="headerlink" href="#block-full-table-operations" title="Permalink to this headline">¶</a></h2>
+<p>Each table in the admin-selected schema gets exposed as a top level route. Client requests are executed by certain database roles depending on their authentication. All HTTP verbs are supported that correspond to actions permitted to the role. For instance if the active role can drop rows of the table then the DELETE verb is allowed for clients. Here’s an API request to delete old rows from a hypothetical logs table:</p>
+<div class="code http highlight-default"><div class="highlight"><pre><span></span>DELETE /logs?time=lt.1991-08-06 HTTP/1.1
+</pre></div>
+</div>
+<p>However it’s very easy to delete the <strong>entire table</strong> by omitting the query parameter!</p>
+<div class="code http highlight-default"><div class="highlight"><pre><span></span><span class="n">DELETE</span> <span class="o">/</span><span class="n">logs</span> <span class="n">HTTP</span><span class="o">/</span><span class="mf">1.1</span>
+</pre></div>
+</div>
+<p>This can happen accidentally such as by switching a request from a GET to a DELETE. To protect against accidental operations use the <a class="reference external" href="https://bitbucket.org/eradman/pg-safeupdate/">pg-safeupdate</a> PostgreSQL extension. It raises an error if UPDATE or DELETE are executed without specifying conditions. To install it you can use the <a class="reference external" href="http://pgxn.org/">PGXN</a> network:</p>
+<div class="highlight-bash"><div class="highlight"><pre><span></span>sudo -E pgxn install safeupdate
+
+<span class="c1"># then add this to postgresql.conf:</span>
+<span class="c1"># shared_preload_libraries=&#39;safeupdate&#39;;</span>
+</pre></div>
+</div>
+<p>This does not protect against malicious actions, since someone can add a url parameter that does not affect the result set. To prevent this you must turn to database permissions, forbidding the wrong people from deleting rows, and using <a class="reference external" href="https://www.postgresql.org/docs/current/static/ddl-rowsecurity.html">row-level security</a> if finer access control is required.</p>
+</div>
+<div class="section" id="count-header-dos">
+<h2>Count-Header DoS<a class="headerlink" href="#count-header-dos" title="Permalink to this headline">¶</a></h2>
+<p>For convenience to client-side pagination controls PostgREST supports counting and reporting total table size in its response. As described in <a class="reference internal" href="api.html#limits"><span class="std std-ref">Limits and Pagination</span></a>, responses ordinarily include a range but leave the total unspecified like</p>
+<div class="highlight-http"><div class="highlight"><pre><span></span><span class="kr">HTTP</span><span class="o">/</span><span class="m">1.1</span> <span class="m">200</span> <span class="ne">OK</span>
+<span class="na">Range-Unit</span><span class="o">:</span> <span class="l">items</span>
+<span class="na">Content-Range</span><span class="o">:</span> <span class="l">0-14/*</span>
+</pre></div>
+</div>
+<p>However including the request header <code class="code docutils literal"><span class="pre">Prefer:</span> <span class="pre">count=exact</span></code> calculates and includes the full count:</p>
+<div class="highlight-http"><div class="highlight"><pre><span></span><span class="kr">HTTP</span><span class="o">/</span><span class="m">1.1</span> <span class="m">206</span> <span class="ne">Partial Content</span>
+<span class="na">Range-Unit</span><span class="o">:</span> <span class="l">items</span>
+<span class="na">Content-Range</span><span class="o">:</span> <span class="l">0-14/3573458</span>
+</pre></div>
+</div>
+<p>This is fine in small tables, but count performance degrades in big tables due to the MVCC architecture of PostgreSQL. For very large tables it can take a very long time to retrieve the results which allows a denial of service attack. The solution is to strip this header from all requests:</p>
+<div class="code highlight-default"><div class="highlight"><pre><span></span><span class="n">Nginx</span> <span class="n">stuff</span><span class="o">.</span> <span class="n">Remove</span> <span class="nb">any</span> <span class="n">prefer</span> <span class="n">header</span> <span class="n">which</span> <span class="n">contains</span> <span class="n">the</span> <span class="n">word</span> <span class="n">count</span>
+</pre></div>
+</div>
+<div class="admonition note">
+<p class="first admonition-title">Note</p>
+<p class="last">In future versions we will support <code class="code docutils literal"><span class="pre">Prefer:</span> <span class="pre">count=estimated</span></code> to leverage the PostgreSQL statistics tables for a fast (and fairly accurate) result.</p>
+</div>
+</div>
+<div class="section" id="https">
+<span id="hardening-https"></span><h2>HTTPS<a class="headerlink" href="#https" title="Permalink to this headline">¶</a></h2>
+<p>See the <a class="reference internal" href="auth.html#ssl"><span class="std std-ref">SSL</span></a> section of the authentication guide.</p>
+</div>
+<div class="section" id="rate-limiting">
+<h2>Rate Limiting<a class="headerlink" href="#rate-limiting" title="Permalink to this headline">¶</a></h2>
+<p>Nginx supports “leaky bucket” rate limiting (see <a class="reference external" href="https://nginx.org/en/docs/http/ngx_http_limit_req_module.html">official docs</a>). Using standard Nginx configuration, routes can be grouped into <em>request zones</em> for rate limiting. For instance we can define a zone for login attempts:</p>
+<div class="highlight-nginx"><div class="highlight"><pre><span></span><span class="k">limit_req_zone</span> <span class="nv">$binary_remote_addr</span> <span class="s">zone=login:10m</span> <span class="s">rate=1r/s</span><span class="p">;</span>
+</pre></div>
+</div>
+<p>This creates a shared memory zone called “login” to store a log of IP addresses that access the rate limited urls. The space reserved, 10 MB (<code class="code docutils literal"><span class="pre">10m</span></code>) will give us enough space to store a history of 160k requests. We have chosen to allow only allow one request per second (<code class="code docutils literal"><span class="pre">1r/s</span></code>).</p>
+<p>Next we apply the zone to certain routes, like a hypothetical stored procedure called <code class="code docutils literal"><span class="pre">login</span></code>.</p>
+<div class="highlight-nginx"><div class="highlight"><pre><span></span><span class="k">location</span> <span class="s">/rpc/login/</span> <span class="p">{</span>
+  <span class="c1"># apply rate limiting</span>
+  <span class="kn">limit_req</span> <span class="s">zone=login</span> <span class="s">burst=5</span><span class="p">;</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+<p>The burst argument tells Nginx to start dropping requests if more than five queue up from a specific IP.</p>
+<p>Nginx rate limiting is general and indiscriminate. To rate limit each authenticated request individually you will need to add logic in a <a class="reference internal" href="auth.html#custom-validation"><span class="std std-ref">Custom Validation</span></a> function.</p>
+</div>
+</div>
+<div class="section" id="debugging">
+<h1>Debugging<a class="headerlink" href="#debugging" title="Permalink to this headline">¶</a></h1>
+<div class="section" id="server-version">
+<h2>Server Version<a class="headerlink" href="#server-version" title="Permalink to this headline">¶</a></h2>
+<p>When debugging a problem it’s important to verify the PostgREST version. At any time you can make a request to the running server and determine exactly which version is deployed. Look for the <code class="code docutils literal"><span class="pre">Server</span></code> HTTP response header, which contains the version number.</p>
+</div>
+<div class="section" id="http-requests">
+<h2>HTTP Requests<a class="headerlink" href="#http-requests" title="Permalink to this headline">¶</a></h2>
+<p>The PostgREST server logs basic request information to stdout, including the requesting IP address and user agent, the URL requested, and HTTP response status. However this provides limited information for debugging server errors. It’s helpful to get full information about both client requests and the corresponding SQL commands executed against the underlying database.</p>
+<p>A great way to inspect incoming HTTP requests including headers and query params is to sniff the network traffic on the port where PostgREST is running. For instance on a development server bound to port 3000 on localhost, run this:</p>
+<div class="code bash highlight-default"><div class="highlight"><pre><span></span><span class="c1"># sudo access is necessary for watching the network</span>
+<span class="n">sudo</span> <span class="n">ngrep</span> <span class="o">-</span><span class="n">d</span> <span class="n">lo0</span> <span class="n">port</span> <span class="mi">3000</span>
+</pre></div>
+</div>
+<p>The options to ngrep vary depending on the address and host on which you’ve bound the server. The binding is described in the <a class="reference internal" href="install.html#configuration"><span class="std std-ref">Configuration</span></a> section. The ngrep output isn’t particularly pretty, but it’s legible.</p>
+</div>
+<div class="section" id="database-logs">
+<h2>Database Logs<a class="headerlink" href="#database-logs" title="Permalink to this headline">¶</a></h2>
+<p>Once you’ve verified that requests are as you expect, you can get more information about the server operations by watching the database logs. By default PostgreSQL does not keep these logs, so you’ll need to make the configuration changes below. Find <code class="code docutils literal"><span class="pre">postgresql.conf</span></code> inside your PostgreSQL data directory (to find that, issue the command <code class="code docutils literal"><span class="pre">show</span> <span class="pre">data_directory;</span></code>). Either find the settings scattered throughout the file and change them to the following values, or append this block of code to the end of the configuration file.</p>
+<div class="code sql highlight-default"><div class="highlight"><pre><span></span><span class="c1"># send logs where the collector can access them</span>
+<span class="n">log_destination</span> <span class="o">=</span> <span class="s2">&quot;stderr&quot;</span>
+
+<span class="c1"># collect stderr output to log files</span>
+<span class="n">logging_collector</span> <span class="o">=</span> <span class="n">on</span>
+
+<span class="c1"># save logs in pg_log/ under the pg data directory</span>
+<span class="n">log_directory</span> <span class="o">=</span> <span class="s2">&quot;pg_log&quot;</span>
+
+<span class="c1"># (optional) new log file per day</span>
+<span class="n">log_filename</span> <span class="o">=</span> <span class="s2">&quot;postgresql-%Y-%m-</span><span class="si">%d</span><span class="s2">.log&quot;</span>
+
+<span class="c1"># log every kind of SQL statement</span>
+<span class="n">log_statement</span> <span class="o">=</span> <span class="s2">&quot;all&quot;</span>
+</pre></div>
+</div>
+<p>Restart the database and watch the log file in real-time to understand how HTTP requests are being translated into SQL commands.</p>
+</div>
+<div class="section" id="schema-reloading">
+<span id="id1"></span><h2>Schema Reloading<a class="headerlink" href="#schema-reloading" title="Permalink to this headline">¶</a></h2>
+<p>Users are often confused by PostgREST’s database schema cache. It is present because detecting foreign key relationships between tables (including how those relationships pass through views) is necessary, but costly. API requests consult the schema cache as part of <a class="reference internal" href="api.html#resource-embedding"><span class="std std-ref">Resource Embedding</span></a>. However if the schema changes while the server is running it results in a stale cache and leads to errors claiming that no relations are detected between tables.</p>
+<p>To refresh the cache without restarting the PostgREST server, send the server process a SIGHUP signal:</p>
+<div class="code bash highlight-default"><div class="highlight"><pre><span></span><span class="n">killall</span> <span class="o">-</span><span class="n">HUP</span> <span class="n">postgrest</span>
+</pre></div>
+</div>
+<p>The above is the manual way to do it. To automate the schema reloads, use a database trigger like this:</p>
+<div class="highlight-postgresql"><div class="highlight"><pre><span></span><span class="k">CREATE</span> <span class="k">OR</span> <span class="k">REPLACE</span> <span class="k">FUNCTION</span> <span class="n">public</span><span class="mf">.</span><span class="n">notify_ddl_postgrest</span><span class="p">()</span>
+  <span class="k">RETURNS</span> <span class="n">event_trigger</span>
+ <span class="k">LANGUAGE</span> <span class="n">plpgsql</span>
+  <span class="k">AS</span> <span class="s">$$</span>
+<span class="k">BEGIN</span>
+  <span class="k">NOTIFY</span> <span class="n">ddl_command_end</span><span class="p">;</span>
+<span class="k">END</span><span class="p">;</span>
+<span class="s">$$</span><span class="p">;</span>
+
+<span class="k">CREATE</span> <span class="k">EVENT</span> <span class="k">TRIGGER</span> <span class="n">ddl_postgrest</span> <span class="k">ON</span> <span class="n">ddl_command_end</span>
+   <span class="k">EXECUTE</span> <span class="k">PROCEDURE</span> <span class="n">public</span><span class="mf">.</span><span class="n">notify_ddl_postgrest</span><span class="p">();</span>
+</pre></div>
+</div>
+<p>Then run the <a class="reference external" href="https://github.com/begriffs/pg_listen">pg_listen</a> utility to monitor for that event and send a SIGHUP when it occurs:</p>
+<div class="highlight-bash"><div class="highlight"><pre><span></span>pg_listen &lt;db-uri&gt; ddl_command_end <span class="s2">&quot;killall -HUP postgrest&quot;</span>
+</pre></div>
+</div>
+<p>Now, whenever the structure of the database schema changes, PostgreSQL will notify the <code class="docutils literal"><span class="pre">ddl_command_end</span></code> channel, which will cause <code class="docutils literal"><span class="pre">pg_listen</span></code> to send PostgREST the signal to reload its cache.</p>
+</div>
+</div>
+<div class="section" id="alternate-url-structure">
+<h1>Alternate URL Structure<a class="headerlink" href="#alternate-url-structure" title="Permalink to this headline">¶</a></h1>
+<p>As discussed in <a class="reference internal" href="api.html#singular-plural"><span class="std std-ref">Singular or Plural</span></a>, there are no special URL forms for singular resources in PostgREST, only operators for filtering. Thus there are no URLs like <code class="code docutils literal"><span class="pre">/people/1</span></code>. It would be specified instead as</p>
+<div class="code http highlight-default"><div class="highlight"><pre><span></span>GET /people?id=eq.1
+Accept: application/vnd.pgrst.object+json
+</pre></div>
+</div>
+<p>This allows compound primary keys and makes the intent for singular response independent of a URL convention.</p>
+<p>Nginx rewrite rules allow you to simulate the familiar URL convention. The following example adds a rewrite rule for all table endpoints, but you’ll want to restrict it to those tables that have a numeric simple primary key named “id.”</p>
+<div class="code nginx highlight-default"><div class="highlight"><pre><span></span># support /endpoint/:id url style
+location ~ ^/([a-z_]+)/([0-9]+) {
+
+  # make the response singular
+  proxy_set_header Accept &#39;application/vnd.pgrst.object+json&#39;;
+
+  # assuming an upstream named &quot;postgrest&quot;
+  proxy_pass http://postgrest/$1?id=eq.$2;
+
+}
+</pre></div>
+</div>
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+  <h3><a href="index.html">Table Of Contents</a></h3>
+  <ul>
+<li><a class="reference internal" href="#">Hardening PostgREST</a><ul>
+<li><a class="reference internal" href="#block-full-table-operations">Block Full-Table Operations</a></li>
+<li><a class="reference internal" href="#count-header-dos">Count-Header DoS</a></li>
+<li><a class="reference internal" href="#https">HTTPS</a></li>
+<li><a class="reference internal" href="#rate-limiting">Rate Limiting</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#debugging">Debugging</a><ul>
+<li><a class="reference internal" href="#server-version">Server Version</a></li>
+<li><a class="reference internal" href="#http-requests">HTTP Requests</a></li>
+<li><a class="reference internal" href="#database-logs">Database Logs</a></li>
+<li><a class="reference internal" href="#schema-reloading">Schema Reloading</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#alternate-url-structure">Alternate URL Structure</a></li>
+</ul>
+
+  <h4>Previous topic</h4>
+  <p class="topless"><a href="auth.html"
+                        title="previous chapter">Overview of Role System</a></p>
+  <div role="note" aria-label="source link">
+    <h3>This Page</h3>
+    <ul class="this-page-menu">
+      <li><a href="_sources/admin.rst.txt"
+            rel="nofollow">Show Source</a></li>
+    </ul>
+   </div>
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <form class="search" action="search.html" method="get">
+      <div><input type="text" name="q" /></div>
+      <div><input type="submit" value="Go" /></div>
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="auth.html" title="Overview of Role System"
+             >previous</a> |</li>
+        <li class="nav-item nav-item-0"><a href="index.html">PostgREST 5.0.0 documentation</a> &#187;</li> 
+      </ul>
+    </div>
+    <div class="footer" role="contentinfo">
+        &#169; Copyright 2017, Joe Nelson.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.6.7.
+    </div>
+  </body>
+</html>

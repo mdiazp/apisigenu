@@ -1,0 +1,279 @@
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <title>Motivation &#8212; PostgREST 5.0.0 documentation</title>
+    <link rel="stylesheet" href="_static/classic.css" type="text/css" />
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    <link rel="stylesheet" href="_static/css/custom.css" type="text/css" />
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    './',
+        VERSION:     '5.0.0',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true,
+        SOURCELINK_SUFFIX: '.txt'
+      };
+    </script>
+    <script type="text/javascript" src="_static/jquery.js"></script>
+    <script type="text/javascript" src="_static/underscore.js"></script>
+    <script type="text/javascript" src="_static/doctools.js"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="Tutorial 0 - Get it Running" href="tutorials/tut0.html" />
+    <link rel="prev" title="&lt;no title&gt;" href="index.html" /> 
+  </head>
+  <body>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="tutorials/tut0.html" title="Tutorial 0 - Get it Running"
+             accesskey="N">next</a> |</li>
+        <li class="right" >
+          <a href="index.html" title="&lt;no title&gt;"
+             accesskey="P">previous</a> |</li>
+        <li class="nav-item nav-item-0"><a href="index.html">PostgREST 5.0.0 documentation</a> &#187;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <div class="section" id="motivation">
+<h1>Motivation<a class="headerlink" href="#motivation" title="Permalink to this headline">¶</a></h1>
+<p>PostgREST is a standalone web server that turns your PostgreSQL database directly into a RESTful API. The structural constraints and permissions in the database determine the API endpoints and operations.</p>
+<p>Using PostgREST is an alternative to manual CRUD programming. Custom API servers suffer problems. Writing business logic often duplicates, ignores or hobbles database structure. Object-relational mapping is a leaky abstraction leading to slow imperative code. The PostgREST philosophy establishes a single declarative source of truth: the data itself.</p>
+<div class="section" id="declarative-programming">
+<h2>Declarative Programming<a class="headerlink" href="#declarative-programming" title="Permalink to this headline">¶</a></h2>
+<p>It’s easier to ask PostgreSQL to join data for you and let its query planner figure out the details than to loop through rows yourself. It’s easier to assign permissions to db objects than to add guards in controllers. (This is especially true for cascading permissions in data dependencies.) It’s easier to set constraints than to litter code with sanity checks.</p>
+</div>
+<div class="section" id="leak-proof-abstraction">
+<h2>Leak-proof Abstraction<a class="headerlink" href="#leak-proof-abstraction" title="Permalink to this headline">¶</a></h2>
+<p>There is no ORM involved. Creating new views happens in SQL with known performance implications. A database administrator can now create an API from scratch with no custom programming.</p>
+</div>
+<div class="section" id="embracing-the-relational-model">
+<h2>Embracing the Relational Model<a class="headerlink" href="#embracing-the-relational-model" title="Permalink to this headline">¶</a></h2>
+<p>In 1970 E. F. Codd criticized the then-dominant hierarchical model of databases in his article A Relational Model of Data for Large Shared Data Banks. Reading the article reveals a striking similarity between hierarchical databases and nested http routes. With PostgREST we attempt to use flexible filtering and embedding rather than nested routes.</p>
+</div>
+<div class="section" id="one-thing-well">
+<h2>One Thing Well<a class="headerlink" href="#one-thing-well" title="Permalink to this headline">¶</a></h2>
+<p>PostgREST has a focused scope. It works well with other tools like Nginx. This forces you to cleanly separate the data-centric CRUD operations from other concerns. Use a collection of sharp tools rather than building a big ball of mud.</p>
+</div>
+<div class="section" id="shared-improvements">
+<h2>Shared Improvements<a class="headerlink" href="#shared-improvements" title="Permalink to this headline">¶</a></h2>
+<p>As with any open source project, we all gain from features and fixes in the tool. It’s more beneficial than improvements locked inextricably within custom code-bases.</p>
+</div>
+</div>
+<div class="section" id="ecosystem">
+<h1>Ecosystem<a class="headerlink" href="#ecosystem" title="Permalink to this headline">¶</a></h1>
+<p>PostgREST has a growing ecosystem of examples, and libraries, experiments, and users. Here is a selection.</p>
+<div class="section" id="client-side-libraries">
+<span id="clientside-libraries"></span><h2>Client-Side Libraries<a class="headerlink" href="#client-side-libraries" title="Permalink to this headline">¶</a></h2>
+<ul class="simple">
+<li><a class="reference external" href="https://github.com/tomberek/aor-postgrest-client">tomberek/aor-postgrest-client</a> - JS, admin-on-rest</li>
+<li><a class="reference external" href="https://github.com/hugomrdias/postgrest-url">hugomrdias/postgrest-url</a> - JS, just for generating query URLs</li>
+<li><a class="reference external" href="https://github.com/john-kelly/elm-postgrest">john-kelly/elm-postgrest</a> - Elm</li>
+<li><a class="reference external" href="https://github.com/catarse/mithril.postgrest">mithril.postgrest</a> - JS, Mithril</li>
+<li><a class="reference external" href="https://github.com/lewisjared/postgrest-request">lewisjared/postgrest-request</a> - JS, SuperAgent</li>
+<li><a class="reference external" href="https://github.com/JarvusInnovations/jarvus-postgrest-apikit">JarvusInnovations/jarvus-postgrest-apikit</a> - JS, Sencha framework</li>
+<li><a class="reference external" href="https://github.com/davidthewatson/postgrest_python_requests_client">davidthewatson/postgrest_python_requests_client</a> - Python</li>
+<li><a class="reference external" href="https://github.com/calebmer/postgrest-client">calebmer/postgrest-client</a> - JS</li>
+<li><a class="reference external" href="https://github.com/clesiemo3/postgrestR">clesiemo3/postgrestR</a> - R</li>
+<li><a class="reference external" href="https://github.com/PierreRochard/postgrest-angular">PierreRochard/postgrest-angular</a> - TypeScript, generate UI from API description</li>
+<li><a class="reference external" href="https://github.com/thejettdurham/postgrest-sharp-client">thejettdurham/postgrest-sharp-client</a> (needs maintainer) - C#, RestSharp</li>
+<li><a class="reference external" href="https://github.com/team142/ng-postgrest">team142/ng-postgrest</a> - Angular app for browsing, editing data exposed over Postgrest.</li>
+</ul>
+</div>
+<div class="section" id="external-notification">
+<h2>External Notification<a class="headerlink" href="#external-notification" title="Permalink to this headline">¶</a></h2>
+<p>These are PostgreSQL bridges that propagate LISTEN/NOTIFY to external queues for further processing. This allows stored procedures to initiate actions outside the database such as sending emails.</p>
+<ul class="simple">
+<li><a class="reference external" href="https://github.com/diogob/postgres-websockets">diogob/postgres-websockets</a> - expose web sockets for PostgreSQL’s LISTEN/NOTIFY</li>
+<li><a class="reference external" href="https://github.com/frafra/postgresql2websocket">frafra/postgresql2websocket</a> - Websockets</li>
+<li><a class="reference external" href="https://github.com/matthewmueller/pg-bridge">matthewmueller/pg-bridge</a> - Amazon SNS</li>
+<li><a class="reference external" href="https://github.com/aweber/pgsql-listen-exchange">aweber/pgsql-listen-exchange</a> - RabbitMQ</li>
+<li><a class="reference external" href="https://github.com/SpiderOak/skeeter">SpiderOak/skeeter</a> - ZeroMQ</li>
+<li><a class="reference external" href="https://github.com/FGRibreau/postgresql-to-amqp">FGRibreau/postgresql-to-amqp</a> - AMQP</li>
+<li><a class="reference external" href="https://github.com/daurnimator/pg-kinesis-bridge">daurnimator/pg-kinesis-bridge</a> - Amazon Kinesis</li>
+</ul>
+</div>
+<div class="section" id="example-apps">
+<h2>Example Apps<a class="headerlink" href="#example-apps" title="Permalink to this headline">¶</a></h2>
+<ul class="simple">
+<li><a class="reference external" href="https://github.com/subzerocloud/postgrest-starter-kit">subzerocloud/postgrest-starter-kit</a> - Boilerplate for new project</li>
+<li><a class="reference external" href="https://github.com/NikolayS/postgrest-google-translate">NikolayS/postgrest-google-translate</a> - Calling to external translation service</li>
+<li><a class="reference external" href="https://github.com/CodeforAustralia/heritage-near-me">CodeforAustralia/heritage-near-me</a> - Elm and PostgREST with PostGIS</li>
+<li><a class="reference external" href="https://github.com/timwis/handsontable-postgrest">timwis/handsontable-postgrest</a> - An excel-like database table editor</li>
+<li><a class="reference external" href="https://github.com/Recmo/PostgrestSkeleton">Recmo/PostgrestSkeleton</a> - Docker Compose, PostgREST, Nginx and Auth0</li>
+<li><a class="reference external" href="https://github.com/benoror/ember-postgrest-dynamic-ui">benoror/ember-postgrest-dynamic-ui</a> - generating Ember forms to edit data</li>
+<li><a class="reference external" href="https://github.com/ruslantalpa/blogdemo">ruslantalpa/blogdemo</a> - blog api demo in a vagrant image</li>
+<li><a class="reference external" href="https://github.com/timwis/ext-postgrest-crud">timwis/ext-postgrest-crud</a> - browser-based spreadsheet</li>
+<li><a class="reference external" href="https://github.com/srid/chronicle">srid/chronicle</a> - tracking a tree of personal memories</li>
+<li><a class="reference external" href="https://github.com/diogob/elm-workshop">diogob/elm-workshop</a> - building a simple database query UI</li>
+<li><a class="reference external" href="https://github.com/marmelab/ng-admin-postgrest">marmelab/ng-admin-postgrest</a> - automatic database admin panel</li>
+<li><a class="reference external" href="https://github.com/myfreeweb/moneylog">myfreeweb/moneylog</a> - accounting web app in Polymer + PostgREST</li>
+<li><a class="reference external" href="https://github.com/tyrchen/goodfilm">tyrchen/goodfilm</a> - example film api</li>
+<li><a class="reference external" href="https://github.com/begriffs/postgrest-example">begriffs/postgrest-example</a> - sqitch versioning for API</li>
+<li><a class="reference external" href="https://github.com/SMRxT/postgrest-demo">SMRxT/postgrest-demo</a> - multi-tenant logging system</li>
+<li><a class="reference external" href="https://github.com/PierreRochard/postgrest-boilerplate">PierreRochard/postgrest-boilerplate</a> - example auth back-end</li>
+</ul>
+</div>
+<div class="section" id="in-production">
+<h2>In Production<a class="headerlink" href="#in-production" title="Permalink to this headline">¶</a></h2>
+<ul class="simple">
+<li><a class="reference external" href="https://triggerfs.io/">triggerFS - A realtime messaging and distributed trigger system</a></li>
+<li><a class="reference external" href="https://moat.com/">Moat</a></li>
+<li><a class="reference external" href="https://www.catarse.me/">Catarse</a></li>
+<li><a class="reference external" href="https://www.redsmin.com/">Redsmin</a></li>
+<li><a class="reference external" href="https://image-charts.com/">Image-charts</a></li>
+<li><a class="reference external" href="https://api.motiondynamic.tech/">MotionDynamic - Fast highly dynamic video generation at scale</a></li>
+<li><a class="reference external" href="https://www.dripdepot.com/">Drip Depot</a></li>
+<li><a class="reference external" href="http://openbooking.ch">OpenBooking</a></li>
+<li><a class="reference external" href="https://info.convene.thomsonreuters.com/en.html">Convene</a> by Thomson-Reuters</li>
+<li><a class="reference external" href="http://www.egull.co">eGull</a></li>
+<li><a class="reference external" href="https://elyios.com">Elyios</a></li>
+</ul>
+</div>
+<div class="section" id="extensions">
+<h2>Extensions<a class="headerlink" href="#extensions" title="Permalink to this headline">¶</a></h2>
+<ul class="simple">
+<li><a class="reference external" href="https://bitbucket.org/eradman/pg-safeupdate/">pg-safeupdate</a> - Prevent full-table updates or deletes</li>
+<li><a class="reference external" href="https://github.com/srid/spas">srid/spas</a> - allow file uploads and basic auth</li>
+<li><a class="reference external" href="https://github.com/svmnotn/postgrest-auth">svmnotn/postgrest-auth</a> - OAuth2-inspired external auth server</li>
+<li><a class="reference external" href="https://github.com/wildsurfer/postgrest-oauth-server">wildsurfer/postgrest-oauth-server</a> - OAuth2 server</li>
+<li><a class="reference external" href="https://github.com/nblumoe/postgrest-oauth">nblumoe/postgrest-oauth</a> - OAuth2 WAI middleware</li>
+<li><a class="reference external" href="https://github.com/criles25/postgrest-auth">criles25/postgrest-auth</a> - email based auth/signup</li>
+<li><a class="reference external" href="https://github.com/ppKrauss/PostgREST-writeAPI">ppKrauss/PostgREST-writeAPI</a> - generate Nginx rewrite rules to fit an OpenAPI spec</li>
+</ul>
+</div>
+<div class="section" id="commercial">
+<h2>Commercial<a class="headerlink" href="#commercial" title="Permalink to this headline">¶</a></h2>
+<ul class="simple">
+<li><a class="reference external" href="https://subzero.cloud/">subZero</a> - Automated GraphQL &amp; REST API with built-in caching (powered in part by PostgREST)</li>
+</ul>
+</div>
+</div>
+<div class="section" id="testimonials">
+<h1>Testimonials<a class="headerlink" href="#testimonials" title="Permalink to this headline">¶</a></h1>
+<blockquote>
+<div><p>“It’s so fast to develop, it feels like cheating!”</p>
+<p class="attribution">&mdash;François-G. Ribreau</p>
+</div></blockquote>
+<blockquote>
+<div><p>“I just have to say that, the CPU/Memory usage compared to our
+Node.js/Waterline ORM based API is ridiculous.  It’s hard to even push
+it over 60/70 MB while our current API constantly hits 1GB running on 6
+instances (dynos).”</p>
+<p class="attribution">&mdash;Louis Brauer</p>
+</div></blockquote>
+<blockquote>
+<div><p>“I really enjoyed the fact that all of a sudden I was writing
+microservices in SQL DDL (and v8 javascript functions). I dodged so
+much boilerplate. The next thing I knew, we pulled out a full rewrite
+of a Spring+MySQL legacy app in 6 months. Literally 10x faster, and
+code was super concise. The old one took 3 years and a team of 4
+people to develop.”</p>
+<p class="attribution">&mdash;Simone Scarduzio</p>
+</div></blockquote>
+<blockquote>
+<div><p>“I like the fact that PostgREST does one thing, and one thing well.
+While PostgREST takes care of bridging the gap between our HTTP server
+and PostgreSQL database, we can focus on the development of our API in
+a single language: SQL. This puts the database in the center of our
+architecture, and pushed us to improve our skills in SQL programming
+and database design.”</p>
+<p class="attribution">&mdash;Eric Bréchemier, Data Engineer, eGull SAS</p>
+</div></blockquote>
+</div>
+<div class="section" id="getting-support">
+<h1>Getting Support<a class="headerlink" href="#getting-support" title="Permalink to this headline">¶</a></h1>
+<p>The project has a friendly and growing community. Join our <a class="reference external" href="https://gitter.im/begriffs/postgrest">chat room</a> for discussion and help. You can also report or search for bugs/features on the Github <a class="reference external" href="https://github.com/begriffs/postgrest/issues">issues</a> page.</p>
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+  <h3><a href="index.html">Table Of Contents</a></h3>
+  <ul>
+<li><a class="reference internal" href="#">Motivation</a><ul>
+<li><a class="reference internal" href="#declarative-programming">Declarative Programming</a></li>
+<li><a class="reference internal" href="#leak-proof-abstraction">Leak-proof Abstraction</a></li>
+<li><a class="reference internal" href="#embracing-the-relational-model">Embracing the Relational Model</a></li>
+<li><a class="reference internal" href="#one-thing-well">One Thing Well</a></li>
+<li><a class="reference internal" href="#shared-improvements">Shared Improvements</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#ecosystem">Ecosystem</a><ul>
+<li><a class="reference internal" href="#client-side-libraries">Client-Side Libraries</a></li>
+<li><a class="reference internal" href="#external-notification">External Notification</a></li>
+<li><a class="reference internal" href="#example-apps">Example Apps</a></li>
+<li><a class="reference internal" href="#in-production">In Production</a></li>
+<li><a class="reference internal" href="#extensions">Extensions</a></li>
+<li><a class="reference internal" href="#commercial">Commercial</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#testimonials">Testimonials</a></li>
+<li><a class="reference internal" href="#getting-support">Getting Support</a></li>
+</ul>
+
+  <h4>Previous topic</h4>
+  <p class="topless"><a href="index.html"
+                        title="previous chapter">&lt;no title&gt;</a></p>
+  <h4>Next topic</h4>
+  <p class="topless"><a href="tutorials/tut0.html"
+                        title="next chapter">Tutorial 0 - Get it Running</a></p>
+  <div role="note" aria-label="source link">
+    <h3>This Page</h3>
+    <ul class="this-page-menu">
+      <li><a href="_sources/intro.rst.txt"
+            rel="nofollow">Show Source</a></li>
+    </ul>
+   </div>
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <form class="search" action="search.html" method="get">
+      <div><input type="text" name="q" /></div>
+      <div><input type="submit" value="Go" /></div>
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="tutorials/tut0.html" title="Tutorial 0 - Get it Running"
+             >next</a> |</li>
+        <li class="right" >
+          <a href="index.html" title="&lt;no title&gt;"
+             >previous</a> |</li>
+        <li class="nav-item nav-item-0"><a href="index.html">PostgREST 5.0.0 documentation</a> &#187;</li> 
+      </ul>
+    </div>
+    <div class="footer" role="contentinfo">
+        &#169; Copyright 2017, Joe Nelson.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.6.7.
+    </div>
+  </body>
+</html>

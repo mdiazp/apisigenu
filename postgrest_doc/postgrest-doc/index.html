@@ -1,0 +1,270 @@
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <title>PostgREST Documentation &#8212; PostgREST 5.0.0 documentation</title>
+    <link rel="stylesheet" href="_static/classic.css" type="text/css" />
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    <link rel="stylesheet" href="_static/css/custom.css" type="text/css" />
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    './',
+        VERSION:     '5.0.0',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true,
+        SOURCELINK_SUFFIX: '.txt'
+      };
+    </script>
+    <script type="text/javascript" src="_static/jquery.js"></script>
+    <script type="text/javascript" src="_static/underscore.js"></script>
+    <script type="text/javascript" src="_static/doctools.js"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="Motivation" href="intro.html" /> 
+  </head>
+  <body>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="intro.html" title="Motivation"
+             accesskey="N">next</a> |</li>
+        <li class="nav-item nav-item-0"><a href="#">PostgREST 5.0.0 documentation</a> &#187;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <img alt="_images/logo.png" src="_images/logo.png" />
+<div class="toctree-wrapper compound">
+</div>
+<div class="toctree-wrapper compound">
+<p class="caption"><span class="caption-text">What is PostgREST?</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="intro.html">Motivation</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="intro.html#declarative-programming">Declarative Programming</a></li>
+<li class="toctree-l2"><a class="reference internal" href="intro.html#leak-proof-abstraction">Leak-proof Abstraction</a></li>
+<li class="toctree-l2"><a class="reference internal" href="intro.html#embracing-the-relational-model">Embracing the Relational Model</a></li>
+<li class="toctree-l2"><a class="reference internal" href="intro.html#one-thing-well">One Thing Well</a></li>
+<li class="toctree-l2"><a class="reference internal" href="intro.html#shared-improvements">Shared Improvements</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="intro.html#ecosystem">Ecosystem</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="intro.html#client-side-libraries">Client-Side Libraries</a></li>
+<li class="toctree-l2"><a class="reference internal" href="intro.html#external-notification">External Notification</a></li>
+<li class="toctree-l2"><a class="reference internal" href="intro.html#example-apps">Example Apps</a></li>
+<li class="toctree-l2"><a class="reference internal" href="intro.html#in-production">In Production</a></li>
+<li class="toctree-l2"><a class="reference internal" href="intro.html#extensions">Extensions</a></li>
+<li class="toctree-l2"><a class="reference internal" href="intro.html#commercial">Commercial</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="intro.html#testimonials">Testimonials</a></li>
+<li class="toctree-l1"><a class="reference internal" href="intro.html#getting-support">Getting Support</a></li>
+</ul>
+</div>
+<div class="toctree-wrapper compound">
+<p class="caption"><span class="caption-text">Tutorials</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="tutorials/tut0.html">Tutorial 0 - Get it Running</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="tutorials/tut0.html#step-1-relax-we-ll-help">Step 1. Relax, we’ll help</a></li>
+<li class="toctree-l2"><a class="reference internal" href="tutorials/tut0.html#step-2-install-postgresql">Step 2. Install PostgreSQL</a></li>
+<li class="toctree-l2"><a class="reference internal" href="tutorials/tut0.html#step-3-install-postgrest">Step 3. Install PostgREST</a></li>
+<li class="toctree-l2"><a class="reference internal" href="tutorials/tut0.html#step-4-create-database-for-api">Step 4. Create Database for API</a></li>
+<li class="toctree-l2"><a class="reference internal" href="tutorials/tut0.html#step-5-run-postgrest">Step 5. Run PostgREST</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="tutorials/tut1.html">Tutorial 1 - The Golden Key</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="tutorials/tut1.html#step-1-add-a-trusted-user">Step 1. Add a Trusted User</a></li>
+<li class="toctree-l2"><a class="reference internal" href="tutorials/tut1.html#step-2-make-a-secret">Step 2. Make a Secret</a></li>
+<li class="toctree-l2"><a class="reference internal" href="tutorials/tut1.html#step-3-sign-a-token">Step 3. Sign a Token</a></li>
+<li class="toctree-l2"><a class="reference internal" href="tutorials/tut1.html#step-4-make-a-request">Step 4. Make a Request</a></li>
+<li class="toctree-l2"><a class="reference internal" href="tutorials/tut1.html#step-4-add-expiration">Step 4. Add Expiration</a></li>
+<li class="toctree-l2"><a class="reference internal" href="tutorials/tut1.html#bonus-topic-immediate-revocation">Bonus Topic: Immediate Revocation</a></li>
+</ul>
+</li>
+</ul>
+</div>
+<div class="toctree-wrapper compound">
+<p class="caption"><span class="caption-text">Installation</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="install.html">Binary Release</a></li>
+<li class="toctree-l1"><a class="reference internal" href="install.html#postgresql-dependency">PostgreSQL dependency</a></li>
+<li class="toctree-l1"><a class="reference internal" href="install.html#configuration">Configuration</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="install.html#running-the-server">Running the Server</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="install.html#docker">Docker</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="install.html#containerized-postgrest-with-native-postgresql">Containerized PostgREST with native PostgreSQL</a></li>
+<li class="toctree-l2"><a class="reference internal" href="install.html#containerized-postgrest-and-db-with-docker-compose">Containerized PostgREST <em>and</em> db with docker-compose</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="install.html#build-from-source">Build from Source</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="install.html#postgrest-test-suite">PostgREST Test Suite</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="install.html#creating-the-test-database">Creating the Test Database</a></li>
+<li class="toctree-l3"><a class="reference internal" href="install.html#running-the-tests">Running the Tests</a></li>
+<li class="toctree-l3"><a class="reference internal" href="install.html#destroying-the-database">Destroying the Database</a></li>
+<li class="toctree-l3"><a class="reference internal" href="install.html#testing-with-docker">Testing with Docker</a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+</div>
+<div class="toctree-wrapper compound">
+<p class="caption"><span class="caption-text">API</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="api.html">Tables and Views</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="api.html#horizontal-filtering-rows">Horizontal Filtering (Rows)</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="api.html#full-text-search">Full-Text Search</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="api.html#vertical-filtering-columns">Vertical Filtering (Columns)</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="api.html#computed-columns">Computed Columns</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="api.html#ordering">Ordering</a></li>
+<li class="toctree-l2"><a class="reference internal" href="api.html#limits-and-pagination">Limits and Pagination</a></li>
+<li class="toctree-l2"><a class="reference internal" href="api.html#response-format">Response Format</a></li>
+<li class="toctree-l2"><a class="reference internal" href="api.html#singular-or-plural">Singular or Plural</a></li>
+<li class="toctree-l2"><a class="reference internal" href="api.html#binary-output">Binary output</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="api.html#unicode-support">Unicode Support</a></li>
+<li class="toctree-l1"><a class="reference internal" href="api.html#resource-embedding">Resource Embedding</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="api.html#embedded-operations">Embedded Operations</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="api.html#custom-queries">Custom Queries</a></li>
+<li class="toctree-l1"><a class="reference internal" href="api.html#stored-procedures">Stored Procedures</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="api.html#explicit-qualification">Explicit Qualification</a></li>
+<li class="toctree-l2"><a class="reference internal" href="api.html#accessing-request-headers-cookies">Accessing Request Headers/Cookies</a></li>
+<li class="toctree-l2"><a class="reference internal" href="api.html#errors-and-http-status-codes">Errors and HTTP Status Codes</a></li>
+<li class="toctree-l2"><a class="reference internal" href="api.html#setting-response-headers">Setting Response Headers</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="api.html#insertions-updates">Insertions / Updates</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="api.html#bulk-insert">Bulk Insert</a></li>
+<li class="toctree-l2"><a class="reference internal" href="api.html#upsert">Upsert</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="api.html#deletions">Deletions</a></li>
+<li class="toctree-l1"><a class="reference internal" href="api.html#openapi-support">OpenAPI Support</a></li>
+<li class="toctree-l1"><a class="reference internal" href="api.html#http-status-codes">HTTP Status Codes</a></li>
+</ul>
+</div>
+<div class="toctree-wrapper compound">
+<p class="caption"><span class="caption-text">Authentication</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="auth.html">Overview of Role System</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="auth.html#authentication-sequence">Authentication Sequence</a></li>
+<li class="toctree-l2"><a class="reference internal" href="auth.html#users-and-groups">Users and Groups</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="auth.html#roles-for-each-web-user">Roles for Each Web User</a></li>
+<li class="toctree-l3"><a class="reference internal" href="auth.html#web-users-sharing-role">Web Users Sharing Role</a></li>
+<li class="toctree-l3"><a class="reference internal" href="auth.html#hybrid-user-group-roles">Hybrid User-Group Roles</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="auth.html#custom-validation">Custom Validation</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="auth.html#client-auth">Client Auth</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="auth.html#jwt-generation">JWT Generation</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="auth.html#jwt-from-sql">JWT from SQL</a></li>
+<li class="toctree-l3"><a class="reference internal" href="auth.html#jwt-from-auth0">JWT from Auth0</a></li>
+<li class="toctree-l3"><a class="reference internal" href="auth.html#asymmetric-keys">Asymmetric Keys</a></li>
+<li class="toctree-l3"><a class="reference internal" href="auth.html#jwt-security">JWT security</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="auth.html#ssl">SSL</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="auth.html#schema-isolation">Schema Isolation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="auth.html#sql-user-management">SQL User Management</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="auth.html#storing-users-and-passwords">Storing Users and Passwords</a></li>
+<li class="toctree-l2"><a class="reference internal" href="auth.html#public-user-interface">Public User Interface</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="auth.html#logins">Logins</a></li>
+<li class="toctree-l3"><a class="reference internal" href="auth.html#permissions">Permissions</a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+</div>
+<div class="toctree-wrapper compound">
+<p class="caption"><span class="caption-text">Administration</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="admin.html">Hardening PostgREST</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="admin.html#block-full-table-operations">Block Full-Table Operations</a></li>
+<li class="toctree-l2"><a class="reference internal" href="admin.html#count-header-dos">Count-Header DoS</a></li>
+<li class="toctree-l2"><a class="reference internal" href="admin.html#https">HTTPS</a></li>
+<li class="toctree-l2"><a class="reference internal" href="admin.html#rate-limiting">Rate Limiting</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="admin.html#debugging">Debugging</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="admin.html#server-version">Server Version</a></li>
+<li class="toctree-l2"><a class="reference internal" href="admin.html#http-requests">HTTP Requests</a></li>
+<li class="toctree-l2"><a class="reference internal" href="admin.html#database-logs">Database Logs</a></li>
+<li class="toctree-l2"><a class="reference internal" href="admin.html#schema-reloading">Schema Reloading</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="admin.html#alternate-url-structure">Alternate URL Structure</a></li>
+</ul>
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+  <h4>Next topic</h4>
+  <p class="topless"><a href="intro.html"
+                        title="next chapter">Motivation</a></p>
+  <div role="note" aria-label="source link">
+    <h3>This Page</h3>
+    <ul class="this-page-menu">
+      <li><a href="_sources/index.rst.txt"
+            rel="nofollow">Show Source</a></li>
+    </ul>
+   </div>
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <form class="search" action="search.html" method="get">
+      <div><input type="text" name="q" /></div>
+      <div><input type="submit" value="Go" /></div>
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="intro.html" title="Motivation"
+             >next</a> |</li>
+        <li class="nav-item nav-item-0"><a href="#">PostgREST 5.0.0 documentation</a> &#187;</li> 
+      </ul>
+    </div>
+    <div class="footer" role="contentinfo">
+        &#169; Copyright 2017, Joe Nelson.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.6.7.
+    </div>
+  </body>
+</html>

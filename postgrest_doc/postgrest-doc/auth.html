@@ -1,0 +1,517 @@
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <title>Overview of Role System &#8212; PostgREST 5.0.0 documentation</title>
+    <link rel="stylesheet" href="_static/classic.css" type="text/css" />
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    <link rel="stylesheet" href="_static/css/custom.css" type="text/css" />
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    './',
+        VERSION:     '5.0.0',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true,
+        SOURCELINK_SUFFIX: '.txt'
+      };
+    </script>
+    <script type="text/javascript" src="_static/jquery.js"></script>
+    <script type="text/javascript" src="_static/underscore.js"></script>
+    <script type="text/javascript" src="_static/doctools.js"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="Hardening PostgREST" href="admin.html" />
+    <link rel="prev" title="Tables and Views" href="api.html" /> 
+  </head>
+  <body>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="admin.html" title="Hardening PostgREST"
+             accesskey="N">next</a> |</li>
+        <li class="right" >
+          <a href="api.html" title="Tables and Views"
+             accesskey="P">previous</a> |</li>
+        <li class="nav-item nav-item-0"><a href="index.html">PostgREST 5.0.0 documentation</a> &#187;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <div class="section" id="overview-of-role-system">
+<span id="roles"></span><h1>Overview of Role System<a class="headerlink" href="#overview-of-role-system" title="Permalink to this headline">¶</a></h1>
+<p>PostgREST is designed to keep the database at the center of API security. All authorization happens through database roles and permissions. It is PostgREST’s job to <strong>authenticate</strong> requests – i.e. verify that a client is who they say they are – and then let the database <strong>authorize</strong> client actions.</p>
+<div class="section" id="authentication-sequence">
+<h2>Authentication Sequence<a class="headerlink" href="#authentication-sequence" title="Permalink to this headline">¶</a></h2>
+<p>There are three types of roles used by PostgREST, the <strong>authenticator</strong>, <strong>anonymous</strong> and <strong>user</strong> roles. The database administrator creates these roles and configures PostgREST to use them.</p>
+<img alt="_images/security-roles.png" src="_images/security-roles.png" />
+<p>The authenticator should be created <code class="code docutils literal"><span class="pre">NOINHERIT</span></code> and configured in the database to have very limited access. It is a chameleon whose job is to “become” other users to service authenticated HTTP requests. The picture below shows how the server handles authentication. If auth succeeds, it switches into the user role specified by the request, otherwise it switches into the anonymous role.</p>
+<img alt="_images/security-anon-choice.png" src="_images/security-anon-choice.png" />
+<p>Here are the technical details. We use <a class="reference external" href="http://jwt.io/">JSON Web Tokens</a> to authenticate API requests. As you’ll recall a JWT contains a list of cryptographically signed claims. All claims are allowed but PostgREST cares specifically about a claim called role.</p>
+<div class="code json highlight-default"><div class="highlight"><pre><span></span><span class="p">{</span>
+  <span class="s2">&quot;role&quot;</span><span class="p">:</span> <span class="s2">&quot;user123&quot;</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+<p>When a request contains a valid JWT with a role claim PostgREST will switch to the database role with that name for the duration of the HTTP request.</p>
+<div class="code sql highlight-default"><div class="highlight"><pre><span></span><span class="n">SET</span> <span class="n">LOCAL</span> <span class="n">ROLE</span> <span class="n">user123</span><span class="p">;</span>
+</pre></div>
+</div>
+<p>Note that the database administrator must allow the authenticator role to switch into this user by previously executing</p>
+<div class="code sql highlight-default"><div class="highlight"><pre><span></span><span class="n">GRANT</span> <span class="n">user123</span> <span class="n">TO</span> <span class="n">authenticator</span><span class="p">;</span>
+</pre></div>
+</div>
+<p>If the client included no JWT (or one without a role claim) then PostgREST switches into the anonymous role whose actual database-specific name, like that of with the authenticator role, is specified in the PostgREST server configuration file. The database administrator must set anonymous role permissions correctly to prevent anonymous users from seeing or changing things they shouldn’t.</p>
+</div>
+<div class="section" id="users-and-groups">
+<h2>Users and Groups<a class="headerlink" href="#users-and-groups" title="Permalink to this headline">¶</a></h2>
+<p>PostgreSQL manages database access permissions using the concept of roles. A role can be thought of as either a database user, or a group of database users, depending on how the role is set up.</p>
+<div class="section" id="roles-for-each-web-user">
+<h3>Roles for Each Web User<a class="headerlink" href="#roles-for-each-web-user" title="Permalink to this headline">¶</a></h3>
+<p>PostgREST can accommodate either viewpoint. If you treat a role as a single user then the the JWT-based role switching described above does most of what you need. When an authenticated user makes a request PostgREST will switch into the role for that user, which in addition to restricting queries, is available to SQL through the <code class="code docutils literal"><span class="pre">current_user</span></code> variable.</p>
+<p>You can use row-level security to flexibly restrict visibility and access for the current user. Here is an <a class="reference external" href="http://blog.2ndquadrant.com/application-users-vs-row-level-security/">example</a> from Tomas Vondra, a chat table storing messages sent between users. Users can insert rows into it to send messages to other users, and query it to see messages sent to them by other users.</p>
+<div class="code sql highlight-default"><div class="highlight"><pre><span></span><span class="n">CREATE</span> <span class="n">TABLE</span> <span class="n">chat</span> <span class="p">(</span>
+  <span class="n">message_uuid</span>    <span class="n">UUID</span> <span class="n">PRIMARY</span> <span class="n">KEY</span> <span class="n">DEFAULT</span> <span class="n">uuid_generate_v4</span><span class="p">(),</span>
+  <span class="n">message_time</span>    <span class="n">TIMESTAMP</span> <span class="n">NOT</span> <span class="n">NULL</span> <span class="n">DEFAULT</span> <span class="n">now</span><span class="p">(),</span>
+  <span class="n">message_from</span>    <span class="n">NAME</span>      <span class="n">NOT</span> <span class="n">NULL</span> <span class="n">DEFAULT</span> <span class="n">current_user</span><span class="p">,</span>
+  <span class="n">message_to</span>      <span class="n">NAME</span>      <span class="n">NOT</span> <span class="n">NULL</span><span class="p">,</span>
+  <span class="n">message_subject</span> <span class="n">VARCHAR</span><span class="p">(</span><span class="mi">64</span><span class="p">)</span> <span class="n">NOT</span> <span class="n">NULL</span><span class="p">,</span>
+  <span class="n">message_body</span>    <span class="n">TEXT</span>
+<span class="p">);</span>
+</pre></div>
+</div>
+<p>We want to enforce a policy that ensures a user can see only those messages sent by him or intended for him. Also we want to prevent a user from forging the message_from column with another person’s name.</p>
+<p>PostgreSQL (9.5 and later) allows us to set this policy with row-level security:</p>
+<div class="code sql highlight-default"><div class="highlight"><pre><span></span><span class="n">CREATE</span> <span class="n">POLICY</span> <span class="n">chat_policy</span> <span class="n">ON</span> <span class="n">chat</span>
+  <span class="n">USING</span> <span class="p">((</span><span class="n">message_to</span> <span class="o">=</span> <span class="n">current_user</span><span class="p">)</span> <span class="n">OR</span> <span class="p">(</span><span class="n">message_from</span> <span class="o">=</span> <span class="n">current_user</span><span class="p">))</span>
+  <span class="n">WITH</span> <span class="n">CHECK</span> <span class="p">(</span><span class="n">message_from</span> <span class="o">=</span> <span class="n">current_user</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>Anyone accessing the generated API endpoint for the chat table will see exactly the rows they should, without our needing custom imperative server-side coding.</p>
+</div>
+<div class="section" id="web-users-sharing-role">
+<h3>Web Users Sharing Role<a class="headerlink" href="#web-users-sharing-role" title="Permalink to this headline">¶</a></h3>
+<p>Alternately database roles can represent groups instead of (or in addition to) individual users. You may choose that all signed-in users for a web app share the role webuser. You can distinguish individual users by including extra claims in the JWT such as email.</p>
+<div class="code json highlight-default"><div class="highlight"><pre><span></span><span class="p">{</span>
+  <span class="s2">&quot;role&quot;</span><span class="p">:</span> <span class="s2">&quot;webuser&quot;</span><span class="p">,</span>
+  <span class="s2">&quot;email&quot;</span><span class="p">:</span> <span class="s2">&quot;john@doe.com&quot;</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+<p>SQL code can access claims through GUC variables set by PostgREST per request. For instance to get the email claim, call this function:</p>
+<div class="code sql highlight-default"><div class="highlight"><pre><span></span><span class="n">current_setting</span><span class="p">(</span><span class="s1">&#39;request.jwt.claim.email&#39;</span><span class="p">,</span> <span class="n">true</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>This allows JWT generation services to include extra information and your database code to react to it. For instance the RLS example could be modified to use this current_setting rather than current_user.  The second ‘true’ argument tells current_setting to return NULL if the setting is missing from the current configuration.</p>
+</div>
+<div class="section" id="hybrid-user-group-roles">
+<h3>Hybrid User-Group Roles<a class="headerlink" href="#hybrid-user-group-roles" title="Permalink to this headline">¶</a></h3>
+<p>There is no performance penalty for having many database roles, although roles are namespaced per-cluster rather than per-database so may be prone to collision within the database. You are free to assign a new role for every user in a web application if desired. You can mix the group and individual role policies. For instance we could still have a webuser role and individual users which inherit from it:</p>
+<div class="code sql highlight-default"><div class="highlight"><pre><span></span><span class="n">CREATE</span> <span class="n">ROLE</span> <span class="n">webuser</span> <span class="n">NOLOGIN</span><span class="p">;</span>
+<span class="o">--</span> <span class="n">grant</span> <span class="n">this</span> <span class="n">role</span> <span class="n">access</span> <span class="n">to</span> <span class="n">certain</span> <span class="n">tables</span> <span class="n">etc</span>
+
+<span class="n">CREATE</span> <span class="n">ROLE</span> <span class="n">user000</span> <span class="n">NOLOGIN</span><span class="p">;</span>
+<span class="n">GRANT</span> <span class="n">webuser</span> <span class="n">TO</span> <span class="n">user000</span><span class="p">;</span>
+<span class="o">--</span> <span class="n">now</span> <span class="n">user000</span> <span class="n">can</span> <span class="n">do</span> <span class="n">whatever</span> <span class="n">webuser</span> <span class="n">can</span>
+
+<span class="n">GRANT</span> <span class="n">user000</span> <span class="n">TO</span> <span class="n">authenticator</span><span class="p">;</span>
+<span class="o">--</span> <span class="n">allow</span> <span class="n">authenticator</span> <span class="n">to</span> <span class="n">switch</span> <span class="n">into</span> <span class="n">user000</span> <span class="n">role</span>
+<span class="o">--</span> <span class="p">(</span><span class="n">the</span> <span class="n">role</span> <span class="n">itself</span> <span class="n">has</span> <span class="n">nologin</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+</div>
+<div class="section" id="custom-validation">
+<span id="id1"></span><h2>Custom Validation<a class="headerlink" href="#custom-validation" title="Permalink to this headline">¶</a></h2>
+<p>PostgREST honors the <code class="code docutils literal"><span class="pre">exp</span></code> claim for token expiration, rejecting expired tokens. However it does not enforce any extra constraints. An example of an extra constraint would be to immediately revoke access for a certain user. The configuration file paramter <code class="code docutils literal"><span class="pre">pre-request</span></code> specifies a stored procedure to call immediately after the authenticator switches into a new role and before the main query itself runs.</p>
+<p>Here’s an example. In the config file specify a stored procedure:</p>
+<div class="code ini highlight-default"><div class="highlight"><pre><span></span><span class="n">pre</span><span class="o">-</span><span class="n">request</span> <span class="o">=</span> <span class="s2">&quot;public.check_user&quot;</span>
+</pre></div>
+</div>
+<p>In the function you can run arbitrary code to check the request and raise an exception to block it if desired.</p>
+<div class="code sql highlight-default"><div class="highlight"><pre><span></span>CREATE OR REPLACE FUNCTION check_user() RETURNS void
+  LANGUAGE plpgsql
+  AS $$
+BEGIN
+  IF current_user = &#39;evil_user&#39; THEN
+    RAISE EXCEPTION &#39;No, you are evil&#39;
+      USING HINT = &#39;Stop being so evil and maybe you can log in&#39;;
+  END IF;
+END
+$$;
+</pre></div>
+</div>
+</div>
+</div>
+<div class="section" id="client-auth">
+<h1>Client Auth<a class="headerlink" href="#client-auth" title="Permalink to this headline">¶</a></h1>
+<p>To make an authenticated request the client must include an <code class="code docutils literal"><span class="pre">Authorization</span></code> HTTP header with the value <code class="code docutils literal"><span class="pre">Bearer</span> <span class="pre">&lt;jwt&gt;</span></code>. For instance:</p>
+<div class="code http highlight-default"><div class="highlight"><pre><span></span><span class="n">GET</span> <span class="o">/</span><span class="n">foo</span> <span class="n">HTTP</span><span class="o">/</span><span class="mf">1.1</span>
+<span class="n">Authorization</span><span class="p">:</span> <span class="n">Bearer</span> <span class="n">eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9</span><span class="o">.</span><span class="n">eyJyb2xlIjoiamRvZSIsImV4cCI6MTQ3NTUxNjI1MH0</span><span class="o">.</span><span class="n">GYDZV3yM0gqvuEtJmfpplLBXSGYnke_Pvnl0tbKAjB4</span>
+</pre></div>
+</div>
+<div class="section" id="jwt-generation">
+<h2>JWT Generation<a class="headerlink" href="#jwt-generation" title="Permalink to this headline">¶</a></h2>
+<p>You can create a valid JWT either from inside your database or via an external service. Each token is cryptographically signed with a secret key. In the case of symmetric cryptography the signer and verifier share the same secret passphrase. In asymmetric cryptography the signer uses the private key and the verifier the public key. PostgREST supports both symmetric and asymmetric cryptography.</p>
+<div class="section" id="jwt-from-sql">
+<h3>JWT from SQL<a class="headerlink" href="#jwt-from-sql" title="Permalink to this headline">¶</a></h3>
+<p>You can create JWT tokens in SQL using the <a class="reference external" href="https://github.com/michelp/pgjwt">pgjwt extension</a>. It’s simple and requires only pgcrypto. If you’re on an environment like Amazon RDS which doesn’t support installing new extensions, you can still manually run the SQL inside pgjwt which creates the functions you will need.</p>
+<p>Next write a stored procedure that returns the token. The one below returns a token with a hard-coded role, which expires five minutes after it was issued. Note this function has a hard-coded secret as well.</p>
+<div class="code sql highlight-default"><div class="highlight"><pre><span></span>CREATE TYPE jwt_token AS (
+  token text
+);
+
+CREATE FUNCTION jwt_test() RETURNS public.jwt_token
+    LANGUAGE sql
+    AS $$
+  SELECT sign(
+    row_to_json(r), &#39;reallyreallyreallyreallyverysafe&#39;
+  ) AS token
+  FROM (
+    SELECT
+      &#39;my_role&#39;::text as role,
+      extract(epoch from now())::integer + 300 AS exp
+  ) r;
+$$;
+</pre></div>
+</div>
+<p>PostgREST exposes this function to clients via a POST request to <cite>/rpc/jwt_test</cite>.</p>
+<div class="admonition note">
+<p class="first admonition-title">Note</p>
+<p>To avoid hard-coding the secret in stored procedures, save it as a property of the database.</p>
+<div class="last highlight-postgres"><div class="highlight"><pre><span></span><span class="c1">-- run this once</span>
+<span class="k">ALTER</span> <span class="k">DATABASE</span> <span class="n">mydb</span> <span class="k">SET</span> <span class="s s-Name">&quot;app.jwt_secret&quot;</span> <span class="k">TO</span> <span class="s1">&#39;reallyreallyreallyreallyverysafe&#39;</span><span class="p">;</span>
+
+<span class="c1">-- then all functions can refer to app.jwt_secret</span>
+<span class="k">SELECT</span> <span class="n">sign</span><span class="p">(</span>
+  <span class="n">row_to_json</span><span class="p">(</span><span class="n">r</span><span class="p">),</span> <span class="n">current_setting</span><span class="p">(</span><span class="s1">&#39;app.jwt_secret&#39;</span><span class="p">)</span>
+<span class="p">)</span> <span class="k">AS</span> <span class="n">token</span>
+<span class="k">FROM</span> <span class="mf">...</span>
+</pre></div>
+</div>
+</div>
+</div>
+<div class="section" id="jwt-from-auth0">
+<h3>JWT from Auth0<a class="headerlink" href="#jwt-from-auth0" title="Permalink to this headline">¶</a></h3>
+<p>An external service like <a class="reference external" href="https://auth0.com/">Auth0</a> can do the hard work transforming OAuth from Github, Twitter, Google etc into a JWT suitable for PostgREST. Auth0 can also handle email signup and password reset flows.</p>
+<p>To use Auth0, copy its client secret into your PostgREST configuration file as the <code class="code docutils literal"><span class="pre">jwt-secret</span></code>. (Old-style Auth0 secrets are Base64 encoded. For these secrets set <code class="code docutils literal"><span class="pre">secret-is-base64</span></code> to <code class="code docutils literal"><span class="pre">true</span></code>, or just refresh the Auth0 secret.) You can find the secret in the client settings of the Auth0 management console.</p>
+<div class="admonition note">
+<p class="first admonition-title">Note</p>
+<p>Make sure OIDC-conformant is toggled off.</p>
+<p>A recent Auth0 change sets it on by default. Turn it <cite>off</cite> here:</p>
+<p>Clients &gt; <cite>Your App</cite> &gt; Settings &gt; Show Advanced Settings &gt; OAuth &gt; OIDC Conformant</p>
+<p class="last">Ensure also that your client application does not pass in any <cite>audience</cite> configuration.</p>
+</div>
+<p>Our code requires a database role in the JWT. To add it you need to save the database role in Auth0 <a class="reference external" href="https://auth0.com/docs/rules/metadata-in-rules">app metadata</a>. Then, you will need to write a rule that will extract the role from the user metadata and include a <code class="code docutils literal"><span class="pre">role</span></code> claim in the payload of our user object. Afterwards, in your Auth0Lock code, include the <code class="code docutils literal"><span class="pre">role</span></code> claim in your <a class="reference external" href="https://auth0.com/docs/libraries/lock/v10/sending-authentication-parameters#scope-string-">scope param</a>.</p>
+<div class="code javascript highlight-default"><div class="highlight"><pre><span></span><span class="o">//</span> <span class="n">Example</span> <span class="n">Auth0</span> <span class="n">rule</span>
+<span class="n">function</span> <span class="p">(</span><span class="n">user</span><span class="p">,</span> <span class="n">context</span><span class="p">,</span> <span class="n">callback</span><span class="p">)</span> <span class="p">{</span>
+  <span class="n">user</span><span class="o">.</span><span class="n">app_metadata</span> <span class="o">=</span> <span class="n">user</span><span class="o">.</span><span class="n">app_metadata</span> <span class="o">||</span> <span class="p">{};</span>
+  <span class="n">user</span><span class="o">.</span><span class="n">role</span> <span class="o">=</span> <span class="n">user</span><span class="o">.</span><span class="n">app_metadata</span><span class="o">.</span><span class="n">role</span><span class="p">;</span>
+  <span class="n">callback</span><span class="p">(</span><span class="n">null</span><span class="p">,</span> <span class="n">user</span><span class="p">,</span> <span class="n">context</span><span class="p">);</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+<div class="code javascript highlight-default"><div class="highlight"><pre><span></span><span class="o">//</span> <span class="n">Example</span> <span class="n">using</span> <span class="n">Auth0Lock</span> <span class="k">with</span> <span class="n">role</span> <span class="n">claim</span> <span class="ow">in</span> <span class="n">scope</span>
+<span class="n">new</span> <span class="n">Auth0Lock</span> <span class="p">(</span> <span class="n">AUTH0_CLIENTID</span><span class="p">,</span> <span class="n">AUTH0_DOMAIN</span><span class="p">,</span> <span class="p">{</span>
+  <span class="n">container</span><span class="p">:</span> <span class="s1">&#39;lock-container&#39;</span><span class="p">,</span>
+  <span class="n">auth</span><span class="p">:</span> <span class="p">{</span>
+    <span class="n">params</span><span class="p">:</span> <span class="p">{</span> <span class="n">scope</span><span class="p">:</span> <span class="s1">&#39;openid role&#39;</span> <span class="p">},</span>
+    <span class="n">redirectUrl</span><span class="p">:</span> <span class="n">FQDN</span> <span class="o">+</span> <span class="s1">&#39;/login&#39;</span><span class="p">,</span> <span class="o">//</span> <span class="n">Replace</span> <span class="k">with</span> <span class="n">your</span> <span class="n">redirect</span> <span class="n">url</span>
+    <span class="n">responseType</span><span class="p">:</span> <span class="s1">&#39;token&#39;</span>
+  <span class="p">}</span>
+<span class="p">})</span>
+</pre></div>
+</div>
+</div>
+<div class="section" id="asymmetric-keys">
+<span id="asym-keys"></span><h3>Asymmetric Keys<a class="headerlink" href="#asymmetric-keys" title="Permalink to this headline">¶</a></h3>
+<p>As described in the <a class="reference internal" href="install.html#configuration"><span class="std std-ref">Configuration</span></a> section, PostgREST accepts a <code class="docutils literal"><span class="pre">jwt-secret</span></code> config file parameter. If it is set to a simple string value like “reallyreallyreallyreallyverysafe” then PostgREST interprets it as an HMAC-SHA256 passphrase. However you can also specify a literal JWT key JSON value. For example, you can use an RSA-256 public key such as:</p>
+<div class="highlight-json"><div class="highlight"><pre><span></span><span class="p">{</span>
+  <span class="nt">&quot;alg&quot;</span><span class="p">:</span><span class="s2">&quot;RS256&quot;</span><span class="p">,</span>
+  <span class="nt">&quot;e&quot;</span><span class="p">:</span><span class="s2">&quot;AQAB&quot;</span><span class="p">,</span>
+  <span class="nt">&quot;key_ops&quot;</span><span class="p">:[</span><span class="s2">&quot;verify&quot;</span><span class="p">],</span>
+  <span class="nt">&quot;kty&quot;</span><span class="p">:</span><span class="s2">&quot;RSA&quot;</span><span class="p">,</span>
+  <span class="nt">&quot;n&quot;</span><span class="p">:</span><span class="s2">&quot;9zKNYTaYGfGm1tBMpRT6FxOYrM720GhXdettc02uyakYSEHU2IJz90G_MLlEl4-WWWYoS_QKFupw3s7aPYlaAjamG22rAnvWu-rRkP5sSSkKvud_IgKL4iE6Y2WJx2Bkl1XUFkdZ8wlEUR6O1ft3TS4uA-qKifSZ43CahzAJyUezOH9shI--tirC028lNg767ldEki3WnVr3zokSujC9YJ_9XXjw2hFBfmJUrNb0-wldvxQbFU8RPXip-GQ_JPTrCTZhrzGFeWPvhA6Rqmc3b1PhM9jY7Dur1sjYWYVyXlFNCK3c-6feo5WlRfe1aCWmwZQh6O18eTmLeT4nWYkDzQ&quot;</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+<p>Just pass it in as a single line string, escaping the quotes:</p>
+<div class="highlight-ini"><div class="highlight"><pre><span></span><span class="na">jwt-secret</span> <span class="o">=</span> <span class="s">&quot;{ \&quot;alg\&quot;:\&quot;RS256\&quot;, … }&quot;</span>
+</pre></div>
+</div>
+<p>To generate such a public/private key pair use a utility like <a class="reference external" href="https://github.com/latchset/jose">latchset/jose</a>.</p>
+<div class="highlight-bash"><div class="highlight"><pre><span></span>jose jwk gen -i <span class="s1">&#39;{&quot;alg&quot;: &quot;RS256&quot;}&#39;</span> -o rsa.jwk
+jose jwk pub -i rsa.jwk -o rsa.jwk.pub
+
+<span class="c1"># now rsa.jwk.pub contains the desired JSON object</span>
+</pre></div>
+</div>
+<p>You can specify the literal value as we saw earlier, or reference a filename to load the JWK from a file:</p>
+<div class="highlight-ini"><div class="highlight"><pre><span></span><span class="na">jwt-secret</span> <span class="o">=</span> <span class="s">&quot;@rsa.jwk.pub&quot;</span>
+</pre></div>
+</div>
+</div>
+<div class="section" id="jwt-security">
+<h3>JWT security<a class="headerlink" href="#jwt-security" title="Permalink to this headline">¶</a></h3>
+<p>There are at least three types of common critiques against using JWT: 1) against the standard itself, 2) against using libraries with known security vulnerabilities, and 3) against using JWT for web sessions. We’ll briefly explain each critique, how PostgREST deals with it, and give recommendations for appropriate user action.</p>
+<p>The critique against the <a class="reference external" href="https://tools.ietf.org/html/rfc7519">JWT standard</a> is voiced in detail <a class="reference external" href="https://paragonie.com/blog/2017/03/jwt-json-web-tokens-is-bad-standard-that-everyone-should-avoid">elsewhere on the web</a>. The most relevant part for PostgREST is the so-called <code class="code docutils literal"><span class="pre">alg=none</span></code> issue. Some servers implementing JWT allow clients to choose the algorithm used to sign the JWT. In this case, an attacker could set the algorithm to <code class="code docutils literal"><span class="pre">none</span></code>, remove the need for any signature at all and gain unauthorized access. The current implementation of PostgREST, however, does not allow clients to set the signature algorithm in the HTTP request, making this attack irrelevant. The critique against the standard is that it requires the implementation of the <code class="code docutils literal"><span class="pre">alg=none</span></code> at all.</p>
+<p>Critiques against JWT libraries are only relevant to PostgREST via the library it uses. As mentioned above, not allowing clients to choose the signature algorithm in HTTP requests removes the greatest risk. Another more subtle attack is possible where servers use asymmetric algorithms like RSA for signatures. Once again this is not relevant to PostgREST since it is not supported. Curious readers can find more information in <a class="reference external" href="https://auth0.com/blog/critical-vulnerabilities-in-json-web-token-libraries/">this article</a>. Recommendations about high quality libraries for usage in API clients can be found on <a class="reference external" href="https://jwt.io/">jwt.io</a>.</p>
+<p>The last type of critique focuses on the misuse of JWT for maintaining web sessions. The basic recommendation is to <a class="reference external" href="http://cryto.net/~joepie91/blog/2016/06/13/stop-using-jwt-for-sessions/">stop using JWT for sessions</a> because most, if not all, solutions to the problems that arise when you do, <a class="reference external" href="http://cryto.net/~joepie91/blog/2016/06/19/stop-using-jwt-for-sessions-part-2-why-your-solution-doesnt-work/">do not work</a>. The linked articles discuss the problems in depth but the essence of the problem is that JWT is not designed to be secure and stateful units for client-side storage and therefore not suited to session management.</p>
+<p>PostgREST uses JWT mainly for authentication and authorization purposes and encourages users to do the same. For web sessions, using cookies over HTTPS is good enough and well catered for by standard web frameworks.</p>
+</div>
+</div>
+<div class="section" id="ssl">
+<span id="id2"></span><h2>SSL<a class="headerlink" href="#ssl" title="Permalink to this headline">¶</a></h2>
+<p>PostgREST aims to do one thing well: add an HTTP interface to a PostgreSQL database. To keep the code small and focused we do not implement SSL. Use a reverse proxy such as NGINX to add this, <a class="reference external" href="https://nginx.org/en/docs/http/configuring_https_servers.html">here’s how</a>. Note that some Platforms as a Service like Heroku also add SSL automatically in their load balancer.</p>
+</div>
+</div>
+<div class="section" id="schema-isolation">
+<h1>Schema Isolation<a class="headerlink" href="#schema-isolation" title="Permalink to this headline">¶</a></h1>
+<p>A PostgREST instance is configured to expose all the tables, views, and stored procedures of a single schema specified in a server configuration file. This means private data or implementation details can go inside a private schema and be invisible to HTTP clients. You can then expose views and stored procedures which insulate the internal details from the outside world. It keeps you code easier to refactor, and provides a natural way to do API versioning. For an example of wrapping a private table with a public view see the <a class="reference internal" href="#public-ui"><span class="std std-ref">Public User Interface</span></a> section below.</p>
+</div>
+<div class="section" id="sql-user-management">
+<h1>SQL User Management<a class="headerlink" href="#sql-user-management" title="Permalink to this headline">¶</a></h1>
+<div class="section" id="storing-users-and-passwords">
+<h2>Storing Users and Passwords<a class="headerlink" href="#storing-users-and-passwords" title="Permalink to this headline">¶</a></h2>
+<p>As mentioned, an external service can provide user management and coordinate with the PostgREST server using JWT. It’s also possible to support logins entirely through SQL. It’s a fair bit of work, so get ready.</p>
+<p>The following table, functions, and triggers will live in a <code class="code docutils literal"><span class="pre">basic_auth</span></code> schema that you shouldn’t expose publicly in the API. The public views and functions will live in a different schema which internally references this internal information.</p>
+<p>First we’ll need a table to keep track of our users:</p>
+<div class="code sql highlight-default"><div class="highlight"><pre><span></span><span class="o">--</span> <span class="n">We</span> <span class="n">put</span> <span class="n">things</span> <span class="n">inside</span> <span class="n">the</span> <span class="n">basic_auth</span> <span class="n">schema</span> <span class="n">to</span> <span class="n">hide</span>
+<span class="o">--</span> <span class="n">them</span> <span class="kn">from</span> <span class="nn">public</span> <span class="n">view</span><span class="o">.</span> <span class="n">Certain</span> <span class="n">public</span> <span class="n">procs</span><span class="o">/</span><span class="n">views</span> <span class="n">will</span>
+<span class="o">--</span> <span class="n">refer</span> <span class="n">to</span> <span class="n">helpers</span> <span class="ow">and</span> <span class="n">tables</span> <span class="n">inside</span><span class="o">.</span>
+<span class="n">create</span> <span class="n">schema</span> <span class="k">if</span> <span class="ow">not</span> <span class="n">exists</span> <span class="n">basic_auth</span><span class="p">;</span>
+
+<span class="n">create</span> <span class="n">table</span> <span class="k">if</span> <span class="ow">not</span> <span class="n">exists</span>
+<span class="n">basic_auth</span><span class="o">.</span><span class="n">users</span> <span class="p">(</span>
+  <span class="n">email</span>    <span class="n">text</span> <span class="n">primary</span> <span class="n">key</span> <span class="n">check</span> <span class="p">(</span> <span class="n">email</span> <span class="o">~*</span> <span class="s1">&#39;^.+@.+\..+$&#39;</span> <span class="p">),</span>
+  <span class="k">pass</span>     <span class="n">text</span> <span class="ow">not</span> <span class="n">null</span> <span class="n">check</span> <span class="p">(</span><span class="n">length</span><span class="p">(</span><span class="k">pass</span><span class="p">)</span> <span class="o">&lt;</span> <span class="mi">512</span><span class="p">),</span>
+  <span class="n">role</span>     <span class="n">name</span> <span class="ow">not</span> <span class="n">null</span> <span class="n">check</span> <span class="p">(</span><span class="n">length</span><span class="p">(</span><span class="n">role</span><span class="p">)</span> <span class="o">&lt;</span> <span class="mi">512</span><span class="p">)</span>
+<span class="p">);</span>
+</pre></div>
+</div>
+<p>We would like the role to be a foreign key to actual database roles, however PostgreSQL does not support these constraints against the <code class="code docutils literal"><span class="pre">pg_roles</span></code> table. We’ll use a trigger to manually enforce it.</p>
+<div class="code plpgsql highlight-default"><div class="highlight"><pre><span></span>create or replace function
+basic_auth.check_role_exists() returns trigger
+  language plpgsql
+  as $$
+begin
+  if not exists (select 1 from pg_roles as r where r.rolname = new.role) then
+    raise foreign_key_violation using message =
+      &#39;unknown database role: &#39; || new.role;
+    return null;
+  end if;
+  return new;
+end
+$$;
+
+drop trigger if exists ensure_user_role_exists on basic_auth.users;
+create constraint trigger ensure_user_role_exists
+  after insert or update on basic_auth.users
+  for each row
+  execute procedure basic_auth.check_role_exists();
+</pre></div>
+</div>
+<p>Next we’ll use the pgcrypto extension and a trigger to keep passwords safe in the <code class="code docutils literal"><span class="pre">users</span></code> table.</p>
+<div class="code plpgsql highlight-default"><div class="highlight"><pre><span></span>create extension if not exists pgcrypto;
+
+create or replace function
+basic_auth.encrypt_pass() returns trigger
+  language plpgsql
+  as $$
+begin
+  if tg_op = &#39;INSERT&#39; or new.pass &lt;&gt; old.pass then
+    new.pass = crypt(new.pass, gen_salt(&#39;bf&#39;));
+  end if;
+  return new;
+end
+$$;
+
+drop trigger if exists encrypt_pass on basic_auth.users;
+create trigger encrypt_pass
+  before insert or update on basic_auth.users
+  for each row
+  execute procedure basic_auth.encrypt_pass();
+</pre></div>
+</div>
+<p>With the table in place we can make a helper to check a password against the encrypted column. It returns the database role for a user if the email and password are correct.</p>
+<div class="code plpgsql highlight-default"><div class="highlight"><pre><span></span>create or replace function
+basic_auth.user_role(email text, pass text) returns name
+  language plpgsql
+  as $$
+begin
+  return (
+  select role from basic_auth.users
+   where users.email = user_role.email
+     and users.pass = crypt(user_role.pass, users.pass)
+  );
+end;
+$$;
+</pre></div>
+</div>
+</div>
+<div class="section" id="public-user-interface">
+<span id="public-ui"></span><h2>Public User Interface<a class="headerlink" href="#public-user-interface" title="Permalink to this headline">¶</a></h2>
+<p>In the previous section we created an internal table to store user information. Here we create a login function which takes an email address and password and returns JWT if the credentials match a user in the internal table.</p>
+<div class="section" id="logins">
+<h3>Logins<a class="headerlink" href="#logins" title="Permalink to this headline">¶</a></h3>
+<p>As described in <a class="reference internal" href="#jwt-from-sql">JWT from SQL</a>, we’ll create a JWT inside our login function. Note that you’ll need to adjust the secret key which is hard-coded in this example to a secure (at least thirty-two character) secret of your choosing.</p>
+<div class="code plpgsql highlight-default"><div class="highlight"><pre><span></span>create or replace function
+login(email text, pass text) returns basic_auth.jwt_token
+  language plpgsql
+  as $$
+declare
+  _role name;
+  result basic_auth.jwt_token;
+begin
+  -- check email and password
+  select basic_auth.user_role(email, pass) into _role;
+  if _role is null then
+    raise invalid_password using message = &#39;invalid user or password&#39;;
+  end if;
+
+  select sign(
+      row_to_json(r), &#39;reallyreallyreallyreallyverysafe&#39;
+    ) as token
+    from (
+      select _role as role, login.email as email,
+         extract(epoch from now())::integer + 60*60 as exp
+    ) r
+    into result;
+  return result;
+end;
+$$;
+</pre></div>
+</div>
+<p>An API request to call this function would look like:</p>
+<div class="code http highlight-default"><div class="highlight"><pre><span></span><span class="n">POST</span> <span class="o">/</span><span class="n">rpc</span><span class="o">/</span><span class="n">login</span> <span class="n">HTTP</span><span class="o">/</span><span class="mf">1.1</span>
+
+<span class="p">{</span> <span class="s2">&quot;email&quot;</span><span class="p">:</span> <span class="s2">&quot;foo@bar.com&quot;</span><span class="p">,</span> <span class="s2">&quot;pass&quot;</span><span class="p">:</span> <span class="s2">&quot;foobar&quot;</span> <span class="p">}</span>
+</pre></div>
+</div>
+<p>The response would look like the snippet below. Try decoding the token at <a class="reference external" href="https://jwt.io/">jwt.io</a>. (It was encoded with a secret of <code class="code docutils literal"><span class="pre">reallyreallyreallyreallyverysafe</span></code> as specified in the SQL code above. You’ll want to change this secret in your app!)</p>
+<div class="code json highlight-default"><div class="highlight"><pre><span></span><span class="p">{</span>
+  <span class="s2">&quot;token&quot;</span><span class="p">:</span> <span class="s2">&quot;eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJlbWFpbCI6ImZvb0BiYXIuY29tIiwicGFzcyI6ImZvb2JhciJ9.37066TTRlh-1hXhnA9oO9Pj6lgL6zFuJU0iCHhuCFno&quot;</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+</div>
+<div class="section" id="permissions">
+<h3>Permissions<a class="headerlink" href="#permissions" title="Permalink to this headline">¶</a></h3>
+<p>Your database roles need access to the schema, tables, views and functions in order to service HTTP requests. Recall from the <a class="reference internal" href="#overview-of-role-system">Overview of Role System</a> that PostgREST uses special roles to process requests, namely the authenticator and anonymous roles. Below is an example of permissions that allow anonymous users to create accounts and attempt to log in.</p>
+<div class="code sql highlight-default"><div class="highlight"><pre><span></span><span class="o">--</span> <span class="n">the</span> <span class="n">names</span> <span class="s2">&quot;anon&quot;</span> <span class="ow">and</span> <span class="s2">&quot;authenticator&quot;</span> <span class="n">are</span> <span class="n">configurable</span> <span class="ow">and</span> <span class="ow">not</span>
+<span class="o">--</span> <span class="n">sacred</span><span class="p">,</span> <span class="n">we</span> <span class="n">simply</span> <span class="n">choose</span> <span class="n">them</span> <span class="k">for</span> <span class="n">clarity</span>
+<span class="n">create</span> <span class="n">role</span> <span class="n">anon</span><span class="p">;</span>
+<span class="n">create</span> <span class="n">role</span> <span class="n">authenticator</span> <span class="n">noinherit</span><span class="p">;</span>
+<span class="n">grant</span> <span class="n">anon</span> <span class="n">to</span> <span class="n">authenticator</span><span class="p">;</span>
+
+<span class="n">grant</span> <span class="n">usage</span> <span class="n">on</span> <span class="n">schema</span> <span class="n">public</span><span class="p">,</span> <span class="n">basic_auth</span> <span class="n">to</span> <span class="n">anon</span><span class="p">;</span>
+<span class="n">grant</span> <span class="n">select</span> <span class="n">on</span> <span class="n">table</span> <span class="n">pg_authid</span><span class="p">,</span> <span class="n">basic_auth</span><span class="o">.</span><span class="n">users</span> <span class="n">to</span> <span class="n">anon</span><span class="p">;</span>
+<span class="n">grant</span> <span class="n">execute</span> <span class="n">on</span> <span class="n">function</span> <span class="n">login</span><span class="p">(</span><span class="n">text</span><span class="p">,</span><span class="n">text</span><span class="p">)</span> <span class="n">to</span> <span class="n">anon</span><span class="p">;</span>
+</pre></div>
+</div>
+<p>You may be worried from the above that anonymous users can read everything from the <code class="code docutils literal"><span class="pre">basic_auth.users</span></code> table. However this table is not available for direct queries because it lives in a separate schema. The anonymous role needs access because the public <code class="code docutils literal"><span class="pre">users</span></code> view reads the underlying table with the permissions of the calling user. But we have made sure the view properly restricts access to sensitive information.</p>
+</div>
+</div>
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+  <h3><a href="index.html">Table Of Contents</a></h3>
+  <ul>
+<li><a class="reference internal" href="#">Overview of Role System</a><ul>
+<li><a class="reference internal" href="#authentication-sequence">Authentication Sequence</a></li>
+<li><a class="reference internal" href="#users-and-groups">Users and Groups</a><ul>
+<li><a class="reference internal" href="#roles-for-each-web-user">Roles for Each Web User</a></li>
+<li><a class="reference internal" href="#web-users-sharing-role">Web Users Sharing Role</a></li>
+<li><a class="reference internal" href="#hybrid-user-group-roles">Hybrid User-Group Roles</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#custom-validation">Custom Validation</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#client-auth">Client Auth</a><ul>
+<li><a class="reference internal" href="#jwt-generation">JWT Generation</a><ul>
+<li><a class="reference internal" href="#jwt-from-sql">JWT from SQL</a></li>
+<li><a class="reference internal" href="#jwt-from-auth0">JWT from Auth0</a></li>
+<li><a class="reference internal" href="#asymmetric-keys">Asymmetric Keys</a></li>
+<li><a class="reference internal" href="#jwt-security">JWT security</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#ssl">SSL</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#schema-isolation">Schema Isolation</a></li>
+<li><a class="reference internal" href="#sql-user-management">SQL User Management</a><ul>
+<li><a class="reference internal" href="#storing-users-and-passwords">Storing Users and Passwords</a></li>
+<li><a class="reference internal" href="#public-user-interface">Public User Interface</a><ul>
+<li><a class="reference internal" href="#logins">Logins</a></li>
+<li><a class="reference internal" href="#permissions">Permissions</a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+
+  <h4>Previous topic</h4>
+  <p class="topless"><a href="api.html"
+                        title="previous chapter">Tables and Views</a></p>
+  <h4>Next topic</h4>
+  <p class="topless"><a href="admin.html"
+                        title="next chapter">Hardening PostgREST</a></p>
+  <div role="note" aria-label="source link">
+    <h3>This Page</h3>
+    <ul class="this-page-menu">
+      <li><a href="_sources/auth.rst.txt"
+            rel="nofollow">Show Source</a></li>
+    </ul>
+   </div>
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <form class="search" action="search.html" method="get">
+      <div><input type="text" name="q" /></div>
+      <div><input type="submit" value="Go" /></div>
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="admin.html" title="Hardening PostgREST"
+             >next</a> |</li>
+        <li class="right" >
+          <a href="api.html" title="Tables and Views"
+             >previous</a> |</li>
+        <li class="nav-item nav-item-0"><a href="index.html">PostgREST 5.0.0 documentation</a> &#187;</li> 
+      </ul>
+    </div>
+    <div class="footer" role="contentinfo">
+        &#169; Copyright 2017, Joe Nelson.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.6.7.
+    </div>
+  </body>
+</html>

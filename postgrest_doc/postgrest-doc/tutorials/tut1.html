@@ -1,0 +1,333 @@
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <title>Tutorial 1 - The Golden Key &#8212; PostgREST 5.0.0 documentation</title>
+    <link rel="stylesheet" href="../_static/classic.css" type="text/css" />
+    <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+    <link rel="stylesheet" href="../_static/css/custom.css" type="text/css" />
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../',
+        VERSION:     '5.0.0',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true,
+        SOURCELINK_SUFFIX: '.txt'
+      };
+    </script>
+    <script type="text/javascript" src="../_static/jquery.js"></script>
+    <script type="text/javascript" src="../_static/underscore.js"></script>
+    <script type="text/javascript" src="../_static/doctools.js"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="Binary Release" href="../install.html" />
+    <link rel="prev" title="Tutorial 0 - Get it Running" href="tut0.html" /> 
+  </head>
+  <body>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="../install.html" title="Binary Release"
+             accesskey="N">next</a> |</li>
+        <li class="right" >
+          <a href="tut0.html" title="Tutorial 0 - Get it Running"
+             accesskey="P">previous</a> |</li>
+        <li class="nav-item nav-item-0"><a href="../index.html">PostgREST 5.0.0 documentation</a> &#187;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <div class="section" id="tutorial-1-the-golden-key">
+<span id="tut1"></span><h1>Tutorial 1 - The Golden Key<a class="headerlink" href="#tutorial-1-the-golden-key" title="Permalink to this headline">¶</a></h1>
+<p>In <a class="reference internal" href="tut0.html#tut0"><span class="std std-ref">Tutorial 0 - Get it Running</span></a> we created a read-only API with a single endpoint to list todos. There are many directions we can go to make this API more interesting, but one good place to start would be allowing some users to change data in addition to reading it.</p>
+<div class="section" id="step-1-add-a-trusted-user">
+<h2>Step 1. Add a Trusted User<a class="headerlink" href="#step-1-add-a-trusted-user" title="Permalink to this headline">¶</a></h2>
+<p>The previous tutorial created a <code class="code docutils literal"><span class="pre">web_anon</span></code> role in the database with which to execute anonymous web requests. Let’s make a role called <code class="code docutils literal"><span class="pre">todo_user</span></code> for users who authenticate with the API. This role will have the authority to do anything to the todo list.</p>
+<div class="highlight-postgres"><div class="highlight"><pre><span></span><span class="c1">-- run this in psql using the database created</span>
+<span class="c1">-- in the previous tutorial</span>
+
+<span class="k">create</span> <span class="k">role</span> <span class="n">todo_user</span> <span class="n">nologin</span><span class="p">;</span>
+<span class="k">grant</span> <span class="n">todo_user</span> <span class="k">to</span> <span class="n">postgres</span><span class="p">;</span>
+
+<span class="k">grant</span> <span class="n">usage</span> <span class="k">on</span> <span class="k">schema</span> <span class="n">api</span> <span class="k">to</span> <span class="n">todo_user</span><span class="p">;</span>
+<span class="k">grant</span> <span class="k">all</span> <span class="k">on</span> <span class="n">api</span><span class="mf">.</span><span class="n">todos</span> <span class="k">to</span> <span class="n">todo_user</span><span class="p">;</span>
+<span class="k">grant</span> <span class="n">usage</span><span class="p">,</span> <span class="k">select</span> <span class="k">on</span> <span class="k">sequence</span> <span class="n">api</span><span class="mf">.</span><span class="n">todos_id_seq</span> <span class="k">to</span> <span class="n">todo_user</span><span class="p">;</span>
+</pre></div>
+</div>
+</div>
+<div class="section" id="step-2-make-a-secret">
+<h2>Step 2. Make a Secret<a class="headerlink" href="#step-2-make-a-secret" title="Permalink to this headline">¶</a></h2>
+<p>Clients authenticate with the API using JSON Web Tokens. These are JSON objects which are cryptographically signed using a password known to only us and the server. Because clients do not know the password, they cannot tamper with the contents of their tokens. PostgREST will detect counterfeit tokens and will reject them.</p>
+<p>Let’s create a password and provide it to PostgREST. Think of a nice long one, or use a tool to generate it. <strong>Your password must be at least 32 characters long.</strong></p>
+<div class="admonition note">
+<p class="first admonition-title">Note</p>
+<p>Unix tools can generate a nice password for you:</p>
+<div class="last highlight-bash"><div class="highlight"><pre><span></span><span class="c1"># Allow &quot;tr&quot; to process non-utf8 byte sequences</span>
+<span class="nb">export</span> <span class="nv">LC_CTYPE</span><span class="o">=</span>C
+
+<span class="c1"># read random bytes and keep only alphanumerics</span>
+&lt; /dev/urandom tr -dc A-Za-z0-9 <span class="p">|</span> head -c32
+</pre></div>
+</div>
+</div>
+<p>Open the <code class="code docutils literal"><span class="pre">tutorial.conf</span></code> (created in the previous tutorial) and add a line with the password:</p>
+<div class="highlight-ini"><div class="highlight"><pre><span></span><span class="c1"># PASSWORD MUST BE AT LEAST 32 CHARS LONG</span>
+<span class="c1"># add this line to tutorial.conf:</span>
+
+<span class="na">jwt-secret</span> <span class="o">=</span> <span class="s">&quot;&lt;the password you made&gt;&quot;</span>
+</pre></div>
+</div>
+<p>If the PostgREST server is still running from the previous tutorial, restart it to load the updated configuration file.</p>
+</div>
+<div class="section" id="step-3-sign-a-token">
+<h2>Step 3. Sign a Token<a class="headerlink" href="#step-3-sign-a-token" title="Permalink to this headline">¶</a></h2>
+<p>Ordinarily your own code in the database or in another server will create and sign authentication tokens, but for this tutorial we will make one “by hand.” Go to <a class="reference external" href="https://jwt.io/#debugger-io">jwt.io</a> and fill in the fields like this:</p>
+<div class="figure" id="id1">
+<img alt="jwt.io interface" src="../_images/tut1-jwt-io.png" />
+<p class="caption"><span class="caption-text">How to create a token at <a class="reference external" href="https://jwt.io">https://jwt.io</a></span></p>
+</div>
+<p><strong>Remember to fill in the password you generated rather than the word “secret”.</strong> After you have filled in the password and payload, the encoded data on the left will update. Copy the encoded token.</p>
+<div class="admonition note">
+<p class="first admonition-title">Note</p>
+<p class="last">While the token may look well obscured, it’s easy to reverse engineer the payload. The token is merely signed, not encrypted, so don’t put things inside that you don’t want a determined client to see.</p>
+</div>
+</div>
+<div class="section" id="step-4-make-a-request">
+<h2>Step 4. Make a Request<a class="headerlink" href="#step-4-make-a-request" title="Permalink to this headline">¶</a></h2>
+<p>Back in the terminal, let’s use <code class="code docutils literal"><span class="pre">curl</span></code> to add a todo. The request will include an HTTP header containing the authentication token.</p>
+<div class="highlight-bash"><div class="highlight"><pre><span></span><span class="nb">export</span> <span class="nv">TOKEN</span><span class="o">=</span><span class="s2">&quot;&lt;paste token here&gt;&quot;</span>
+
+curl http://localhost:3000/todos -X POST <span class="se">\</span>
+     -H <span class="s2">&quot;Authorization: Bearer </span><span class="nv">$TOKEN</span><span class="s2">&quot;</span>   <span class="se">\</span>
+     -H <span class="s2">&quot;Content-Type: application/json&quot;</span> <span class="se">\</span>
+     -d <span class="s1">&#39;{&quot;task&quot;: &quot;learn how to auth&quot;}&#39;</span>
+</pre></div>
+</div>
+<p>And now we have completed all three items in our todo list, so let’s set <code class="code docutils literal"><span class="pre">done</span></code> to true for them all with a <code class="code docutils literal"><span class="pre">PATCH</span></code> request.</p>
+<div class="highlight-bash"><div class="highlight"><pre><span></span>curl http://localhost:3000/todos -X PATCH <span class="se">\</span>
+     -H <span class="s2">&quot;Authorization: Bearer </span><span class="nv">$TOKEN</span><span class="s2">&quot;</span>    <span class="se">\</span>
+     -H <span class="s2">&quot;Content-Type: application/json&quot;</span>  <span class="se">\</span>
+     -d <span class="s1">&#39;{&quot;done&quot;: true}&#39;</span>
+</pre></div>
+</div>
+<p>A request for the todos shows three of them, and all completed.</p>
+<div class="highlight-bash"><div class="highlight"><pre><span></span>curl http://localhost:3000/todos
+</pre></div>
+</div>
+<div class="highlight-json"><div class="highlight"><pre><span></span><span class="p">[</span>
+  <span class="p">{</span>
+    <span class="nt">&quot;id&quot;</span><span class="p">:</span> <span class="mi">1</span><span class="p">,</span>
+    <span class="nt">&quot;done&quot;</span><span class="p">:</span> <span class="kc">true</span><span class="p">,</span>
+    <span class="nt">&quot;task&quot;</span><span class="p">:</span> <span class="s2">&quot;finish tutorial 0&quot;</span><span class="p">,</span>
+    <span class="nt">&quot;due&quot;</span><span class="p">:</span> <span class="kc">null</span>
+  <span class="p">},</span>
+  <span class="p">{</span>
+    <span class="nt">&quot;id&quot;</span><span class="p">:</span> <span class="mi">2</span><span class="p">,</span>
+    <span class="nt">&quot;done&quot;</span><span class="p">:</span> <span class="kc">true</span><span class="p">,</span>
+    <span class="nt">&quot;task&quot;</span><span class="p">:</span> <span class="s2">&quot;pat self on back&quot;</span><span class="p">,</span>
+    <span class="nt">&quot;due&quot;</span><span class="p">:</span> <span class="kc">null</span>
+  <span class="p">},</span>
+  <span class="p">{</span>
+    <span class="nt">&quot;id&quot;</span><span class="p">:</span> <span class="mi">3</span><span class="p">,</span>
+    <span class="nt">&quot;done&quot;</span><span class="p">:</span> <span class="kc">true</span><span class="p">,</span>
+    <span class="nt">&quot;task&quot;</span><span class="p">:</span> <span class="s2">&quot;learn how to auth&quot;</span><span class="p">,</span>
+    <span class="nt">&quot;due&quot;</span><span class="p">:</span> <span class="kc">null</span>
+  <span class="p">}</span>
+<span class="p">]</span>
+</pre></div>
+</div>
+</div>
+<div class="section" id="step-4-add-expiration">
+<h2>Step 4. Add Expiration<a class="headerlink" href="#step-4-add-expiration" title="Permalink to this headline">¶</a></h2>
+<p>Currently our authentication token is valid for all eternity. The server, as long as it continues using the same JWT password, will honor the token.</p>
+<p>It’s better policy to include an expiration timestamp for tokens using the <code class="code docutils literal"><span class="pre">exp</span></code> claim. This is one of two JWT claims that PostgREST treats specially.</p>
+<table border="1" class="docutils">
+<colgroup>
+<col width="18%" />
+<col width="82%" />
+</colgroup>
+<thead valign="bottom">
+<tr class="row-odd"><th class="head">Claim</th>
+<th class="head">Interpretation</th>
+</tr>
+</thead>
+<tbody valign="top">
+<tr class="row-even"><td><code class="code docutils literal"><span class="pre">role</span></code></td>
+<td>The database role under which to execute SQL for API request</td>
+</tr>
+<tr class="row-odd"><td><code class="code docutils literal"><span class="pre">exp</span></code></td>
+<td>Expiration timestamp for token, expressed in “Unix epoch time”</td>
+</tr>
+</tbody>
+</table>
+<div class="admonition note">
+<p class="first admonition-title">Note</p>
+<p class="last">Epoch time is defined as the number of seconds that have elapsed since 00:00:00 Coordinated Universal Time (UTC), January 1st 1970, minus the number of leap seconds that have taken place since then.</p>
+</div>
+<p>To observe expiration in action, we’ll add an <code class="code docutils literal"><span class="pre">exp</span></code> claim of five minutes in the future to our previous token. First find the epoch value of five minutes from now. In psql run this:</p>
+<div class="highlight-postgres"><div class="highlight"><pre><span></span><span class="k">select</span> <span class="k">extract</span><span class="p">(</span><span class="n">epoch</span> <span class="k">from</span> <span class="n">now</span><span class="p">()</span> <span class="o">+</span> <span class="s1">&#39;5 minutes&#39;</span><span class="o">::</span><span class="nb">interval</span><span class="p">)</span> <span class="o">::</span> <span class="nb">integer</span><span class="p">;</span>
+</pre></div>
+</div>
+<p>Go back to jwt.io and change the payload to</p>
+<div class="highlight-json"><div class="highlight"><pre><span></span>{
+  &quot;role&quot;: &quot;todo_user&quot;,
+  &quot;exp&quot;: &lt;computed epoch value&gt;
+}
+</pre></div>
+</div>
+<p>Copy the updated token as before, and save it as a new environment variable.</p>
+<div class="highlight-bash"><div class="highlight"><pre><span></span><span class="nb">export</span> <span class="nv">NEW_TOKEN</span><span class="o">=</span><span class="s2">&quot;&lt;paste new token&gt;&quot;</span>
+</pre></div>
+</div>
+<p>Try issuing this request in curl before and after the expiration time:</p>
+<div class="highlight-bash"><div class="highlight"><pre><span></span>curl http://localhost:3000/todos <span class="se">\</span>
+     -H <span class="s2">&quot;Authorization: Bearer </span><span class="nv">$NEW_TOKEN</span><span class="s2">&quot;</span>
+</pre></div>
+</div>
+<p>After expiration, the API returns HTTP 401 Unauthorized:</p>
+<div class="highlight-json"><div class="highlight"><pre><span></span><span class="p">{</span><span class="nt">&quot;message&quot;</span><span class="p">:</span><span class="s2">&quot;JWT expired&quot;</span><span class="p">}</span>
+</pre></div>
+</div>
+</div>
+<div class="section" id="bonus-topic-immediate-revocation">
+<h2>Bonus Topic: Immediate Revocation<a class="headerlink" href="#bonus-topic-immediate-revocation" title="Permalink to this headline">¶</a></h2>
+<p>Even with token expiration there are times when you may want to immediately revoke access for a specific token. For instance, suppose you learn that a disgruntled employee is up to no good and his token is still valid.</p>
+<p>To revoke a specific token we need a way to tell it apart from others. Let’s add a custom <code class="code docutils literal"><span class="pre">email</span></code> claim that matches the email of the client issued the token.</p>
+<p>Go ahead and make a new token with the payload</p>
+<div class="highlight-json"><div class="highlight"><pre><span></span><span class="p">{</span>
+  <span class="nt">&quot;role&quot;</span><span class="p">:</span> <span class="s2">&quot;todo_user&quot;</span><span class="p">,</span>
+  <span class="nt">&quot;email&quot;</span><span class="p">:</span> <span class="s2">&quot;disgruntled@mycompany.com&quot;</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+<p>Save it to an environment variable:</p>
+<div class="highlight-bash"><div class="highlight"><pre><span></span><span class="nb">export</span> <span class="nv">WAYWARD_TOKEN</span><span class="o">=</span><span class="s2">&quot;&lt;paste new token&gt;&quot;</span>
+</pre></div>
+</div>
+<p>PostgREST allows us to specify a stored procedure to run during attempted authentication. The function can do whatever it likes, including raising an exception to terminate the request.</p>
+<p>First make a new schema and add the function:</p>
+<div class="highlight-plpgsql"><div class="highlight"><pre><span></span><span class="k">create</span> <span class="k">schema</span> <span class="n">auth</span><span class="p">;</span>
+<span class="k">grant</span> <span class="n">usage</span> <span class="k">on</span> <span class="k">schema</span> <span class="n">auth</span> <span class="k">to</span> <span class="n">web_anon</span><span class="p">,</span> <span class="n">todo_user</span><span class="p">;</span>
+
+<span class="k">create</span> <span class="k">or</span> <span class="k">replace</span> <span class="k">function</span> <span class="n">auth</span><span class="mf">.</span><span class="n">check_token</span><span class="p">()</span> <span class="k">returns</span> <span class="nb">void</span>
+  <span class="k">language</span> <span class="n">plpgsql</span>
+  <span class="k">as</span> <span class="s">$$</span>
+<span class="k">begin</span>
+  <span class="k">if</span> <span class="n">current_setting</span><span class="p">(</span><span class="s1">&#39;request.jwt.claim.email&#39;</span><span class="p">,</span> <span class="k">true</span><span class="p">)</span> <span class="o">=</span>
+     <span class="s1">&#39;disgruntled@mycompany.com&#39;</span> <span class="k">then</span>
+    <span class="k">raise</span> <span class="n">insufficient_privilege</span>
+      <span class="k">using</span> <span class="n">hint</span> <span class="o">=</span> <span class="s1">&#39;Nope, we are on to you&#39;</span><span class="p">;</span>
+  <span class="k">end</span> <span class="k">if</span><span class="p">;</span>
+<span class="k">end</span>
+<span class="s">$$</span><span class="p">;</span>
+</pre></div>
+</div>
+<p>Next update <code class="code docutils literal"><span class="pre">tutorial.conf</span></code> and specify the new function:</p>
+<div class="highlight-ini"><div class="highlight"><pre><span></span><span class="c1"># add this line to tutorial.conf</span>
+
+<span class="na">pre-request</span> <span class="o">=</span> <span class="s">&quot;auth.check_token&quot;</span>
+</pre></div>
+</div>
+<p>Restart PostgREST for the change to take effect. Next try making a request with our original token and then with the revoked one.</p>
+<div class="highlight-bash"><div class="highlight"><pre><span></span><span class="c1"># this request still works</span>
+
+curl http://localhost:3000/todos <span class="se">\</span>
+     -H <span class="s2">&quot;Authorization: Bearer </span><span class="nv">$TOKEN</span><span class="s2">&quot;</span>
+
+<span class="c1"># this one is rejected</span>
+
+curl http://localhost:3000/todos <span class="se">\</span>
+     -H <span class="s2">&quot;Authorization: Bearer </span><span class="nv">$WAYWARD_TOKEN</span><span class="s2">&quot;</span>
+</pre></div>
+</div>
+<p>The server responds with 403 Forbidden:</p>
+<div class="highlight-json"><div class="highlight"><pre><span></span><span class="p">{</span>
+  <span class="nt">&quot;hint&quot;</span><span class="p">:</span> <span class="s2">&quot;Nope, we are on to you&quot;</span><span class="p">,</span>
+  <span class="nt">&quot;details&quot;</span><span class="p">:</span> <span class="kc">null</span><span class="p">,</span>
+  <span class="nt">&quot;code&quot;</span><span class="p">:</span> <span class="s2">&quot;42501&quot;</span><span class="p">,</span>
+  <span class="nt">&quot;message&quot;</span><span class="p">:</span> <span class="s2">&quot;insufficient_privilege&quot;</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+</div>
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+  <h3><a href="../index.html">Table Of Contents</a></h3>
+  <ul>
+<li><a class="reference internal" href="#">Tutorial 1 - The Golden Key</a><ul>
+<li><a class="reference internal" href="#step-1-add-a-trusted-user">Step 1. Add a Trusted User</a></li>
+<li><a class="reference internal" href="#step-2-make-a-secret">Step 2. Make a Secret</a></li>
+<li><a class="reference internal" href="#step-3-sign-a-token">Step 3. Sign a Token</a></li>
+<li><a class="reference internal" href="#step-4-make-a-request">Step 4. Make a Request</a></li>
+<li><a class="reference internal" href="#step-4-add-expiration">Step 4. Add Expiration</a></li>
+<li><a class="reference internal" href="#bonus-topic-immediate-revocation">Bonus Topic: Immediate Revocation</a></li>
+</ul>
+</li>
+</ul>
+
+  <h4>Previous topic</h4>
+  <p class="topless"><a href="tut0.html"
+                        title="previous chapter">Tutorial 0 - Get it Running</a></p>
+  <h4>Next topic</h4>
+  <p class="topless"><a href="../install.html"
+                        title="next chapter">Binary Release</a></p>
+  <div role="note" aria-label="source link">
+    <h3>This Page</h3>
+    <ul class="this-page-menu">
+      <li><a href="../_sources/tutorials/tut1.rst.txt"
+            rel="nofollow">Show Source</a></li>
+    </ul>
+   </div>
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <form class="search" action="../search.html" method="get">
+      <div><input type="text" name="q" /></div>
+      <div><input type="submit" value="Go" /></div>
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="../install.html" title="Binary Release"
+             >next</a> |</li>
+        <li class="right" >
+          <a href="tut0.html" title="Tutorial 0 - Get it Running"
+             >previous</a> |</li>
+        <li class="nav-item nav-item-0"><a href="../index.html">PostgREST 5.0.0 documentation</a> &#187;</li> 
+      </ul>
+    </div>
+    <div class="footer" role="contentinfo">
+        &#169; Copyright 2017, Joe Nelson.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.6.7.
+    </div>
+  </body>
+</html>

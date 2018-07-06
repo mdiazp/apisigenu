@@ -1,0 +1,1047 @@
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <title>Tables and Views &#8212; PostgREST 5.0.0 documentation</title>
+    <link rel="stylesheet" href="_static/classic.css" type="text/css" />
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    <link rel="stylesheet" href="_static/css/custom.css" type="text/css" />
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    './',
+        VERSION:     '5.0.0',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true,
+        SOURCELINK_SUFFIX: '.txt'
+      };
+    </script>
+    <script type="text/javascript" src="_static/jquery.js"></script>
+    <script type="text/javascript" src="_static/underscore.js"></script>
+    <script type="text/javascript" src="_static/doctools.js"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="Overview of Role System" href="auth.html" />
+    <link rel="prev" title="Binary Release" href="install.html" /> 
+  </head>
+  <body>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="auth.html" title="Overview of Role System"
+             accesskey="N">next</a> |</li>
+        <li class="right" >
+          <a href="install.html" title="Binary Release"
+             accesskey="P">previous</a> |</li>
+        <li class="nav-item nav-item-0"><a href="index.html">PostgREST 5.0.0 documentation</a> &#187;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <div class="section" id="tables-and-views">
+<h1>Tables and Views<a class="headerlink" href="#tables-and-views" title="Permalink to this headline">¶</a></h1>
+<p>All views and tables in the active schema and accessible by the active database role for a request are available for querying. They are exposed in one-level deep routes. For instance the full contents of a table <cite>people</cite> is returned at</p>
+<div class="highlight-http"><div class="highlight"><pre><span></span><span class="nf">GET</span> <span class="nn">/people</span> <span class="kr">HTTP</span><span class="o">/</span><span class="m">1.1</span>
+</pre></div>
+</div>
+<p>There are no deeply/nested/routes. Each route provides OPTIONS, GET, POST, PATCH, and DELETE verbs depending entirely on database permissions.</p>
+<div class="admonition note">
+<p class="first admonition-title">Note</p>
+<p class="last">Why not provide nested routes? Many APIs allow nesting to retrieve related information, such as <code class="code docutils literal"><span class="pre">/films/1/director</span></code>. We offer a more flexible mechanism (inspired by GraphQL) to embed related information. It can handle one-to-many and many-to-many relationships. This is covered in the section about <a class="reference internal" href="#resource-embedding"><span class="std std-ref">Resource Embedding</span></a>.</p>
+</div>
+<div class="section" id="horizontal-filtering-rows">
+<span id="h-filter"></span><h2>Horizontal Filtering (Rows)<a class="headerlink" href="#horizontal-filtering-rows" title="Permalink to this headline">¶</a></h2>
+<p>You can filter result rows by adding conditions on columns, each condition a query string parameter. For instance, to return people aged under 13 years old:</p>
+<div class="highlight-http"><div class="highlight"><pre><span></span><span class="nf">GET</span> <span class="nn">/people?age=lt.13</span> <span class="kr">HTTP</span><span class="o">/</span><span class="m">1.1</span>
+</pre></div>
+</div>
+<p>Multiple parameters can be logically conjoined by:</p>
+<div class="highlight-http"><div class="highlight"><pre><span></span><span class="nf">GET</span> <span class="nn">/people?age=gte.18&amp;student=is.true</span> <span class="kr">HTTP</span><span class="o">/</span><span class="m">1.1</span>
+</pre></div>
+</div>
+<p>Multiple parameters can be logically disjoined by:</p>
+<div class="highlight-http"><div class="highlight"><pre><span></span><span class="nf">GET</span> <span class="nn">/people?or=(age.gte.14,age.lte.18)</span> <span class="kr">HTTP</span><span class="o">/</span><span class="m">1.1</span>
+</pre></div>
+</div>
+<p>Complex logic can also be applied:</p>
+<div class="highlight-http"><div class="highlight"><pre><span></span><span class="nf">GET</span> <span class="nn">/people?and=(grade.gte.90,student.is.true,or(age.gte.14,age.is.null))</span> <span class="kr">HTTP</span><span class="o">/</span><span class="m">1.1</span>
+</pre></div>
+</div>
+<p>These operators are available:</p>
+<table border="1" class="docutils">
+<colgroup>
+<col width="14%" />
+<col width="57%" />
+<col width="29%" />
+</colgroup>
+<thead valign="bottom">
+<tr class="row-odd"><th class="head">Abbreviation</th>
+<th class="head">Meaning</th>
+<th class="head">PostgreSQL Equivalent</th>
+</tr>
+</thead>
+<tbody valign="top">
+<tr class="row-even"><td>eq</td>
+<td>equals</td>
+<td><code class="code docutils literal"><span class="pre">=</span></code></td>
+</tr>
+<tr class="row-odd"><td>gt</td>
+<td>greater than</td>
+<td><code class="code docutils literal"><span class="pre">&gt;</span></code></td>
+</tr>
+<tr class="row-even"><td>gte</td>
+<td>greater than or equal</td>
+<td><code class="code docutils literal"><span class="pre">&gt;=</span></code></td>
+</tr>
+<tr class="row-odd"><td>lt</td>
+<td>less than</td>
+<td><code class="code docutils literal"><span class="pre">&lt;</span></code></td>
+</tr>
+<tr class="row-even"><td>lte</td>
+<td>less than or equal</td>
+<td><code class="code docutils literal"><span class="pre">&lt;=</span></code></td>
+</tr>
+<tr class="row-odd"><td>neq</td>
+<td>not equal</td>
+<td><code class="code docutils literal"><span class="pre">&lt;&gt;</span></code> or <code class="code docutils literal"><span class="pre">!=</span></code></td>
+</tr>
+<tr class="row-even"><td>like</td>
+<td>LIKE operator (use * in place of %)</td>
+<td><code class="code docutils literal"><span class="pre">LIKE</span></code></td>
+</tr>
+<tr class="row-odd"><td>ilike</td>
+<td>ILIKE operator (use * in place of %)</td>
+<td><code class="code docutils literal"><span class="pre">ILIKE</span></code></td>
+</tr>
+<tr class="row-even"><td>in</td>
+<td>one of a list of values e.g.
+<code class="code docutils literal"><span class="pre">?a=in.(1,2,3)</span></code> – also supports commas
+in quoted strings like
+<code class="code docutils literal"><span class="pre">?a=in.(&quot;hi,there&quot;,&quot;yes,you&quot;)</span></code></td>
+<td><code class="code docutils literal"><span class="pre">IN</span></code></td>
+</tr>
+<tr class="row-odd"><td>is</td>
+<td>checking for exact equality (null,true,false)</td>
+<td><code class="code docutils literal"><span class="pre">IS</span></code></td>
+</tr>
+<tr class="row-even"><td>fts</td>
+<td><a class="reference internal" href="#fts"><span class="std std-ref">Full-Text Search</span></a> using to_tsquery</td>
+<td><code class="code docutils literal"><span class="pre">&#64;&#64;</span></code></td>
+</tr>
+<tr class="row-odd"><td>plfts</td>
+<td><a class="reference internal" href="#fts"><span class="std std-ref">Full-Text Search</span></a> using plainto_tsquery</td>
+<td><code class="code docutils literal"><span class="pre">&#64;&#64;</span></code></td>
+</tr>
+<tr class="row-even"><td>phfts</td>
+<td><a class="reference internal" href="#fts"><span class="std std-ref">Full-Text Search</span></a> using phraseto_tsquery</td>
+<td><code class="code docutils literal"><span class="pre">&#64;&#64;</span></code></td>
+</tr>
+<tr class="row-odd"><td>cs</td>
+<td>contains e.g. <code class="code docutils literal"><span class="pre">?tags=cs.{example,</span> <span class="pre">new}</span></code></td>
+<td><code class="code docutils literal"><span class="pre">&#64;&gt;</span></code></td>
+</tr>
+<tr class="row-even"><td>cd</td>
+<td>contained in e.g. <code class="code docutils literal"><span class="pre">?values=cd.{1,2,3}</span></code></td>
+<td><code class="code docutils literal"><span class="pre">&lt;&#64;</span></code></td>
+</tr>
+<tr class="row-odd"><td>ov</td>
+<td>overlap (have points in common),
+e.g. <code class="code docutils literal"><span class="pre">?period=ov.[2017-01-01,2017-06-30]</span></code></td>
+<td><code class="code docutils literal"><span class="pre">&amp;&amp;</span></code></td>
+</tr>
+<tr class="row-even"><td>sl</td>
+<td>strictly left of, e.g. <code class="code docutils literal"><span class="pre">?range=sl.(1,10)</span></code></td>
+<td><code class="code docutils literal"><span class="pre">&lt;&lt;</span></code></td>
+</tr>
+<tr class="row-odd"><td>sr</td>
+<td>strictly right of</td>
+<td><code class="code docutils literal"><span class="pre">&gt;&gt;</span></code></td>
+</tr>
+<tr class="row-even"><td>nxr</td>
+<td>does not extend to the right of,
+e.g. <code class="code docutils literal"><span class="pre">?range=nxr.(1,10)</span></code></td>
+<td><code class="code docutils literal"><span class="pre">&amp;&lt;</span></code></td>
+</tr>
+<tr class="row-odd"><td>nxl</td>
+<td>does not extend to the left of</td>
+<td><code class="code docutils literal"><span class="pre">&amp;&gt;</span></code></td>
+</tr>
+<tr class="row-even"><td>adj</td>
+<td>is adjacent to, e.g. <code class="code docutils literal"><span class="pre">?range=adj.(1,10)</span></code></td>
+<td><code class="code docutils literal"><span class="pre">-|-</span></code></td>
+</tr>
+<tr class="row-odd"><td>not</td>
+<td>negates another operator, see below</td>
+<td><code class="code docutils literal"><span class="pre">NOT</span></code></td>
+</tr>
+</tbody>
+</table>
+<p>To negate any operator, prefix it with <code class="code docutils literal"><span class="pre">not</span></code> like <code class="code docutils literal"><span class="pre">?a=not.eq.2</span></code> or <code class="code docutils literal"><span class="pre">?not.and=(a.gte.0,a.lte.100)</span></code> .</p>
+<p>For more complicated filters you will have to create a new view in the database, or use a stored procedure. For instance, here’s a view to show “today’s stories” including possibly older pinned stories:</p>
+<div class="highlight-postgresql"><div class="highlight"><pre><span></span><span class="k">CREATE</span> <span class="k">VIEW</span> <span class="n">fresh_stories</span> <span class="k">AS</span>
+<span class="k">SELECT</span> <span class="o">*</span>
+  <span class="k">FROM</span> <span class="n">stories</span>
+ <span class="k">WHERE</span> <span class="n">pinned</span> <span class="o">=</span> <span class="k">true</span>
+    <span class="k">OR</span> <span class="n">published</span> <span class="o">&gt;</span> <span class="n">now</span><span class="p">()</span> <span class="o">-</span> <span class="nb">interval</span> <span class="s1">&#39;1 day&#39;</span>
+<span class="k">ORDER</span> <span class="k">BY</span> <span class="n">pinned</span> <span class="k">DESC</span><span class="p">,</span> <span class="n">published</span> <span class="k">DESC</span><span class="p">;</span>
+</pre></div>
+</div>
+<p>The view will provide a new endpoint:</p>
+<div class="highlight-http"><div class="highlight"><pre><span></span><span class="nf">GET</span> <span class="nn">/fresh_stories</span> <span class="kr">HTTP</span><span class="o">/</span><span class="m">1.1</span>
+</pre></div>
+</div>
+<div class="section" id="full-text-search">
+<span id="fts"></span><h3>Full-Text Search<a class="headerlink" href="#full-text-search" title="Permalink to this headline">¶</a></h3>
+<p>The <code class="code docutils literal"><span class="pre">fts</span></code> filter mentioned above has a number of options to support flexible textual queries, namely the choice of plain vs phrase search and the language used for stemming. Suppose that <code class="code docutils literal"><span class="pre">tsearch</span></code> is a table with column <code class="code docutils literal"><span class="pre">my_tsv</span></code>, of type <a class="reference external" href="https://www.postgresql.org/docs/current/static/datatype-textsearch.html">tsvector</a>. The follow examples illustrate the possibilities.</p>
+<div class="highlight-http"><div class="highlight"><pre><span></span># Use language in fts query
+GET /tsearch?my_tsv=fts(french).amusant
+
+# Use plainto_tsquery and phraseto_tsquery
+GET /tsearch?my_tsv=plfts.The%20Fat%20Cats
+GET /tsearch?my_tsv=phfts.The%20Fat%20Rats
+
+# Combine both
+GET /tsearch?my_tsv=phfts(english).The%20Fat%20Cats
+
+# &quot;not&quot; also working
+GET /tsearch?my_tsv=not.phfts(english).The%20Fat%20Cats
+</pre></div>
+</div>
+<p>Using phrase search mode requires PostgreSQL of version at least 9.6 and will raise an error in earlier versions of the database.</p>
+</div>
+</div>
+<div class="section" id="vertical-filtering-columns">
+<span id="v-filter"></span><h2>Vertical Filtering (Columns)<a class="headerlink" href="#vertical-filtering-columns" title="Permalink to this headline">¶</a></h2>
+<p>When certain columns are wide (such as those holding binary data), it is more efficient for the server to withhold them in a response. The client can specify which columns are required using the <code class="code sql docutils literal"><span class="keyword"><span class="pre">select</span></span></code> parameter.</p>
+<div class="highlight-http"><div class="highlight"><pre><span></span><span class="nf">GET</span> <span class="nn">/people?select=first_name,age</span> <span class="kr">HTTP</span><span class="o">/</span><span class="m">1.1</span>
+
+[
+  {&quot;first_name&quot;: &quot;John&quot;, &quot;age&quot;: 30},
+  {&quot;first_name&quot;: &quot;Jane&quot;, &quot;age&quot;: 20}
+]
+</pre></div>
+</div>
+<p>The default is <code class="code sql docutils literal"><span class="operator"><span class="pre">*</span></span></code>, meaning all columns. This value will become more important below in <a class="reference internal" href="#resource-embedding"><span class="std std-ref">Resource Embedding</span></a>.</p>
+<p>You can rename the columns by prefixing them with an alias followed by the colon <code class="docutils literal"><span class="pre">:</span></code> operator.</p>
+<div class="highlight-http"><div class="highlight"><pre><span></span><span class="nf">GET</span> <span class="nn">/people?select=fullName:full_name,birthDate:birth_date</span> <span class="kr">HTTP</span><span class="o">/</span><span class="m">1.1</span>
+
+[
+  {&quot;fullName&quot;: &quot;John Doe&quot;, &quot;birthDate&quot;: &quot;04/25/1988&quot;},
+  {&quot;fullName&quot;: &quot;Jane Doe&quot;, &quot;birthDate&quot;: &quot;01/12/1998&quot;}
+]
+</pre></div>
+</div>
+<p>Casting the columns is possible by suffixing them with the double colon <code class="docutils literal"><span class="pre">::</span></code> plus the desired type.</p>
+<div class="highlight-http"><div class="highlight"><pre><span></span><span class="nf">GET</span> <span class="nn">/people?select=full_name,salary::text</span> <span class="kr">HTTP</span><span class="o">/</span><span class="m">1.1</span>
+
+[
+  {&quot;full_name&quot;: &quot;John Doe&quot;, &quot;salary&quot;: &quot;90000.00&quot;},
+  {&quot;full_name&quot;: &quot;Jane Doe&quot;, &quot;salary&quot;: &quot;120000.00&quot;}
+]
+</pre></div>
+</div>
+<p>You can specify a json path for a <code class="docutils literal"><span class="pre">json</span></code> or <code class="docutils literal"><span class="pre">jsonb</span></code> column using the arrow operators(<code class="docutils literal"><span class="pre">-&gt;</span></code> or <code class="docutils literal"><span class="pre">-&gt;&gt;</span></code>) as per the <a class="reference external" href="https://www.postgresql.org/docs/9.5/static/functions-json.html">PostgreSQL docs</a>.</p>
+<div class="highlight-http"><div class="highlight"><pre><span></span><span class="nf">GET</span> <span class="nn">/people?select=id,json_data-&gt;&gt;blood_type,json_data-&gt;phones</span> <span class="kr">HTTP</span><span class="o">/</span><span class="m">1.1</span>
+
+[
+  { &quot;id&quot;: 1, &quot;blood_type&quot;: &quot;A+&quot;, &quot;phones&quot;: [{&quot;country_code&quot;: &quot;61&quot;, &quot;number&quot;: &quot;917-929-5745&quot;}] },
+  { &quot;id&quot;: 2, &quot;blood_type&quot;: &quot;O+&quot;, &quot;phones&quot;: [{&quot;country_code&quot;: &quot;43&quot;, &quot;number&quot;: &quot;512-446-4988&quot;}, {&quot;country_code&quot;: &quot;43&quot;, &quot;number&quot;: &quot;213-891-5979&quot;}] }
+]
+</pre></div>
+</div>
+<div class="highlight-http"><div class="highlight"><pre><span></span><span class="nf">GET</span> <span class="nn">/people?select=id,json_data-&gt;phones-&gt;0-&gt;&gt;number</span> <span class="kr">HTTP</span><span class="o">/</span><span class="m">1.1</span>
+
+[
+  { &quot;id&quot;: 1, &quot;number&quot;: &quot;917-929-5745&quot;},
+  { &quot;id&quot;: 2, &quot;number&quot;: &quot;512-446-4988&quot;}
+]
+</pre></div>
+</div>
+<div class="section" id="computed-columns">
+<span id="computed-cols"></span><h3>Computed Columns<a class="headerlink" href="#computed-columns" title="Permalink to this headline">¶</a></h3>
+<p>Filters may be applied to computed columns as well as actual table/view columns, even though the computed columns will not appear in the output. For example, to search first and last names at once we can create a computed column that will not appear in the output but can be used in a filter:</p>
+<div class="highlight-postgres"><div class="highlight"><pre><span></span><span class="k">CREATE</span> <span class="k">TABLE</span> <span class="n">people</span> <span class="p">(</span>
+  <span class="n">fname</span> <span class="nb">text</span><span class="p">,</span>
+  <span class="n">lname</span> <span class="nb">text</span>
+<span class="p">);</span>
+
+<span class="k">CREATE</span> <span class="k">FUNCTION</span> <span class="n">full_name</span><span class="p">(</span><span class="n">people</span><span class="p">)</span> <span class="k">RETURNS</span> <span class="nb">text</span> <span class="k">AS</span> <span class="s">$$</span>
+  <span class="k">SELECT</span> <span class="nv">$1</span><span class="mf">.</span><span class="n">fname</span> <span class="o">||</span> <span class="s1">&#39; &#39;</span> <span class="o">||</span> <span class="nv">$1</span><span class="mf">.</span><span class="n">lname</span><span class="p">;</span>
+<span class="s">$$</span> <span class="k">LANGUAGE</span> <span class="n">SQL</span><span class="p">;</span>
+
+<span class="c1">-- (optional) add an index to speed up anticipated query</span>
+<span class="k">CREATE</span> <span class="k">INDEX</span> <span class="n">people_full_name_idx</span> <span class="k">ON</span> <span class="n">people</span>
+  <span class="k">USING</span> <span class="n">GIN</span> <span class="p">(</span><span class="n">to_tsvector</span><span class="p">(</span><span class="s1">&#39;english&#39;</span><span class="p">,</span> <span class="n">full_name</span><span class="p">(</span><span class="n">people</span><span class="p">)));</span>
+</pre></div>
+</div>
+<p>A full-text search on the computed column:</p>
+<div class="highlight-http"><div class="highlight"><pre><span></span><span class="nf">GET</span> <span class="nn">/people?full_name=fts.Beckett</span> <span class="kr">HTTP</span><span class="o">/</span><span class="m">1.1</span>
+</pre></div>
+</div>
+<p>As mentioned, computed columns do not appear in the output by default. However you can include them by listing them in the vertical filtering <code class="code docutils literal"><span class="pre">select</span></code> param:</p>
+<div class="highlight-HTTP"><div class="highlight"><pre><span></span><span class="nf">GET</span> <span class="nn">/people?select=*,full_name</span> <span class="kr">HTTP</span><span class="o">/</span><span class="m">1.1</span>
+</pre></div>
+</div>
+</div>
+</div>
+<div class="section" id="ordering">
+<h2>Ordering<a class="headerlink" href="#ordering" title="Permalink to this headline">¶</a></h2>
+<p>The reserved word <code class="code sql docutils literal"><span class="keyword"><span class="pre">order</span></span></code> reorders the response rows. It uses a comma-separated list of columns and directions:</p>
+<div class="highlight-http"><div class="highlight"><pre><span></span><span class="nf">GET</span> <span class="nn">/people?order=age.desc,height.asc</span> <span class="kr">HTTP</span><span class="o">/</span><span class="m">1.1</span>
+</pre></div>
+</div>
+<p>If no direction is specified it defaults to ascending order:</p>
+<div class="highlight-http"><div class="highlight"><pre><span></span><span class="nf">GET</span> <span class="nn">/people?order=age</span> <span class="kr">HTTP</span><span class="o">/</span><span class="m">1.1</span>
+</pre></div>
+</div>
+<p>If you care where nulls are sorted, add nullsfirst or nullslast:</p>
+<div class="highlight-http"><div class="highlight"><pre><span></span><span class="nf">GET</span> <span class="nn">/people?order=age.nullsfirst</span> <span class="kr">HTTP</span><span class="o">/</span><span class="m">1.1</span>
+</pre></div>
+</div>
+<div class="highlight-http"><div class="highlight"><pre><span></span><span class="nf">GET</span> <span class="nn">/people?order=age.desc.nullslast</span> <span class="kr">HTTP</span><span class="o">/</span><span class="m">1.1</span>
+</pre></div>
+</div>
+<p>You can also use <a class="reference internal" href="#computed-cols"><span class="std std-ref">Computed Columns</span></a> to order the results, even though the computed columns will not appear in the output.</p>
+</div>
+<div class="section" id="limits-and-pagination">
+<span id="limits"></span><h2>Limits and Pagination<a class="headerlink" href="#limits-and-pagination" title="Permalink to this headline">¶</a></h2>
+<p>PostgREST uses HTTP range headers to describe the size of results. Every response contains the current range and, if requested, the total number of results:</p>
+<div class="highlight-http"><div class="highlight"><pre><span></span><span class="kr">HTTP</span><span class="o">/</span><span class="m">1.1</span> <span class="m">200</span> <span class="ne">OK</span>
+<span class="na">Range-Unit</span><span class="o">:</span> <span class="l">items</span>
+<span class="na">Content-Range</span><span class="o">:</span> <span class="l">0-14/*</span>
+</pre></div>
+</div>
+<p>Here items zero through fourteen are returned. This information is available in every response and can help you render pagination controls on the client. This is an RFC7233-compliant solution that keeps the response JSON cleaner.</p>
+<p>There are two ways to apply a limit and offset rows: through request headers or query params. When using headers you specify the range of rows desired. This request gets the first twenty people.</p>
+<div class="highlight-http"><div class="highlight"><pre><span></span><span class="nf">GET</span> <span class="nn">/people</span> <span class="kr">HTTP</span><span class="o">/</span><span class="m">1.1</span>
+<span class="na">Range-Unit</span><span class="o">:</span> <span class="l">items</span>
+<span class="na">Range</span><span class="o">:</span> <span class="l">0-19</span>
+</pre></div>
+</div>
+<p>Note that the server may respond with fewer if unable to meet your request:</p>
+<div class="highlight-http"><div class="highlight"><pre><span></span><span class="kr">HTTP</span><span class="o">/</span><span class="m">1.1</span> <span class="m">200</span> <span class="ne">OK</span>
+<span class="na">Range-Unit</span><span class="o">:</span> <span class="l">items</span>
+<span class="na">Content-Range</span><span class="o">:</span> <span class="l">0-17/*</span>
+</pre></div>
+</div>
+<p>You may also request open-ended ranges for an offset with no limit, e.g. <code class="code docutils literal"><span class="pre">Range:</span> <span class="pre">10-</span></code>.</p>
+<p>The other way to request a limit or offset is with query parameters. For example</p>
+<div class="highlight-http"><div class="highlight"><pre><span></span><span class="nf">GET</span> <span class="nn">/people?limit=15&amp;offset=30</span> <span class="kr">HTTP</span><span class="o">/</span><span class="m">1.1</span>
+</pre></div>
+</div>
+<p>This method is also useful for embedded resources, which we will cover in another section. The server always responds with range headers even if you use query parameters to limit the query.</p>
+<p>In order to obtain the total size of the table or view (such as when rendering the last page link in a pagination control), specify your preference in a request header:</p>
+<div class="highlight-http"><div class="highlight"><pre><span></span><span class="nf">GET</span> <span class="nn">/bigtable</span> <span class="kr">HTTP</span><span class="o">/</span><span class="m">1.1</span>
+<span class="na">Range-Unit</span><span class="o">:</span> <span class="l">items</span>
+<span class="na">Range</span><span class="o">:</span> <span class="l">0-24</span>
+<span class="na">Prefer</span><span class="o">:</span> <span class="l">count=exact</span>
+</pre></div>
+</div>
+<p>Note that the larger the table the slower this query runs in the database. The server will respond with the selected range and total</p>
+<div class="highlight-http"><div class="highlight"><pre><span></span><span class="kr">HTTP</span><span class="o">/</span><span class="m">1.1</span> <span class="m">206</span> <span class="ne">Partial Content</span>
+<span class="na">Range-Unit</span><span class="o">:</span> <span class="l">items</span>
+<span class="na">Content-Range</span><span class="o">:</span> <span class="l">0-24/3573458</span>
+</pre></div>
+</div>
+</div>
+<div class="section" id="response-format">
+<h2>Response Format<a class="headerlink" href="#response-format" title="Permalink to this headline">¶</a></h2>
+<p>PostgREST uses proper HTTP content negotiation (<a class="reference external" href="https://tools.ietf.org/html/rfc7231#section-5.3">RFC7231</a>) to deliver the desired representation of a resource. That is to say the same API endpoint can respond in different formats like JSON or CSV depending on the client request.</p>
+<p>Use the Accept request header to specify the acceptable format (or formats) for the response:</p>
+<div class="highlight-http"><div class="highlight"><pre><span></span><span class="nf">GET</span> <span class="nn">/people</span> <span class="kr">HTTP</span><span class="o">/</span><span class="m">1.1</span>
+<span class="na">Accept</span><span class="o">:</span> <span class="l">application/json</span>
+</pre></div>
+</div>
+<p>The current possibilities are</p>
+<ul class="simple">
+<li>*/*</li>
+<li>text/csv</li>
+<li>application/json</li>
+<li>application/openapi+json</li>
+<li>application/octet-stream</li>
+</ul>
+<p>The server will default to JSON for API endpoints and OpenAPI on the root.</p>
+</div>
+<div class="section" id="singular-or-plural">
+<span id="singular-plural"></span><h2>Singular or Plural<a class="headerlink" href="#singular-or-plural" title="Permalink to this headline">¶</a></h2>
+<p>By default PostgREST returns all JSON results in an array, even when there is only one item. For example, requesting <code class="code docutils literal"><span class="pre">/items?id=eq.1</span></code> returns</p>
+<div class="code json highlight-default"><div class="highlight"><pre><span></span><span class="p">[</span>
+  <span class="p">{</span> <span class="s2">&quot;id&quot;</span><span class="p">:</span> <span class="mi">1</span> <span class="p">}</span>
+<span class="p">]</span>
+</pre></div>
+</div>
+<p>This can be inconvenient for client code. To return the first result as an object unenclosed by an array, specify <code class="code docutils literal"><span class="pre">vnd.pgrst.object</span></code> as part of the <code class="code docutils literal"><span class="pre">Accept</span></code> header</p>
+<div class="code http highlight-default"><div class="highlight"><pre><span></span>GET /items?id=eq.1 HTTP/1.1
+Accept: application/vnd.pgrst.object+json
+</pre></div>
+</div>
+<p>This returns</p>
+<div class="code json highlight-default"><div class="highlight"><pre><span></span><span class="p">{</span> <span class="s2">&quot;id&quot;</span><span class="p">:</span> <span class="mi">1</span> <span class="p">}</span>
+</pre></div>
+</div>
+<p>When a singular response is requested but no entries are found, the server responds with an error message and 406 Not Acceptable status code rather than the usual empty array and 200 status:</p>
+<div class="highlight-json"><div class="highlight"><pre><span></span><span class="p">{</span>
+  <span class="nt">&quot;message&quot;</span><span class="p">:</span> <span class="s2">&quot;JSON object requested, multiple (or no) rows returned&quot;</span><span class="p">,</span>
+  <span class="nt">&quot;details&quot;</span><span class="p">:</span> <span class="s2">&quot;Results contain 0 rows, application/vnd.pgrst.object+json requires 1 row&quot;</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+<div class="admonition note">
+<p class="first admonition-title">Note</p>
+<p>Many APIs distinguish plural and singular resources using a special nested URL convention e.g. <cite>/stories</cite> vs <cite>/stories/1</cite>. Why do we use <cite>/stories?id=eq.1</cite>? The answer is because a singular resource is (for us) a row determined by a primary key, and primary keys can be compound (meaning defined across more than one column). The more familiar nested urls consider only a degenerate case of simple and overwhelmingly numeric primary keys. These so-called artificial keys are often introduced automatically by Object Relational Mapping libraries.</p>
+<p class="last">Admittedly PostgREST could detect when there is an equality condition holding on all columns constituting the primary key and automatically convert to singular. However this could lead to a surprising change of format that breaks unwary client code just by filtering on an extra column. Instead we allow manually specifying singular vs plural to decouple that choice from the URL format.</p>
+</div>
+</div>
+<div class="section" id="binary-output">
+<h2>Binary output<a class="headerlink" href="#binary-output" title="Permalink to this headline">¶</a></h2>
+<p>If you want to return raw binary data from a <code class="code docutils literal"><span class="pre">bytea</span></code> column, you must specify <code class="code docutils literal"><span class="pre">application/octet-stream</span></code> as part of the <code class="code docutils literal"><span class="pre">Accept</span></code> header
+and select a single column <code class="code docutils literal"><span class="pre">?select=bin_data</span></code>.</p>
+<div class="code http highlight-default"><div class="highlight"><pre><span></span>GET /items?select=bin_data&amp;id=eq.1 HTTP/1.1
+Accept: application/octet-stream
+</pre></div>
+</div>
+<p>You can also request binary output when calling stored procedures and since they can return a scalar value you are not forced to use <code class="code docutils literal"><span class="pre">select</span></code>
+for this case.</p>
+<div class="code sql highlight-default"><div class="highlight"><pre><span></span><span class="n">CREATE</span> <span class="n">FUNCTION</span> <span class="n">closest_point</span><span class="p">(</span><span class="o">..</span><span class="p">)</span> <span class="n">RETURNS</span> <span class="n">bytea</span> <span class="o">..</span>
+</pre></div>
+</div>
+<div class="code http highlight-default"><div class="highlight"><pre><span></span><span class="n">POST</span> <span class="o">/</span><span class="n">rpc</span><span class="o">/</span><span class="n">closest_point</span> <span class="n">HTTP</span><span class="o">/</span><span class="mf">1.1</span>
+<span class="n">Accept</span><span class="p">:</span> <span class="n">application</span><span class="o">/</span><span class="n">octet</span><span class="o">-</span><span class="n">stream</span>
+</pre></div>
+</div>
+<p>If the stored procedure returns non-scalar values, you need to do a <code class="code docutils literal"><span class="pre">select</span></code> in the same way as for GET binary output.</p>
+<div class="code sql highlight-default"><div class="highlight"><pre><span></span><span class="n">CREATE</span> <span class="n">FUNCTION</span> <span class="n">overlapping_regions</span><span class="p">(</span><span class="o">..</span><span class="p">)</span> <span class="n">RETURNS</span> <span class="n">SETOF</span> <span class="n">TABLE</span><span class="p">(</span><span class="n">geom_twkb</span> <span class="n">bytea</span><span class="p">,</span> <span class="o">..</span><span class="p">)</span> <span class="o">..</span>
+</pre></div>
+</div>
+<div class="code http highlight-default"><div class="highlight"><pre><span></span>POST /rpc/overlapping_regions?select=geom_twkb HTTP/1.1
+Accept: application/octet-stream
+</pre></div>
+</div>
+<div class="admonition note">
+<p class="first admonition-title">Note</p>
+<p class="last">If more than one row would be returned the binary results will be concatenated with no delimiter.</p>
+</div>
+</div>
+</div>
+<div class="section" id="unicode-support">
+<h1>Unicode Support<a class="headerlink" href="#unicode-support" title="Permalink to this headline">¶</a></h1>
+<p>PostgREST supports unicode in schemas, tables, columns and values. To access a table with unicode name, use percent encoding.</p>
+<p>To request this:</p>
+<div class="highlight-html"><div class="highlight"><pre><span></span>http://localhost:3000/موارد
+</pre></div>
+</div>
+<p>Do this:</p>
+<div class="highlight-html"><div class="highlight"><pre><span></span>http://localhost:3000/%D9%85%D9%88%D8%A7%D8%B1%D8%AF
+</pre></div>
+</div>
+</div>
+<div class="section" id="resource-embedding">
+<span id="id1"></span><h1>Resource Embedding<a class="headerlink" href="#resource-embedding" title="Permalink to this headline">¶</a></h1>
+<p>In addition to providing RESTful routes for each table and view, PostgREST allows related resources to be included together in a single API call. This reduces the need for multiple API requests. The server uses foreign keys to determine which tables and views can be returned together. For example, consider a database of films and their awards:</p>
+<img alt="_images/film.png" src="_images/film.png" />
+<p>As seen above in <a class="reference internal" href="#v-filter"><span class="std std-ref">Vertical Filtering (Columns)</span></a> we can request the titles of all films like this:</p>
+<div class="highlight-http"><div class="highlight"><pre><span></span><span class="nf">GET</span> <span class="nn">/films?select=title</span> <span class="kr">HTTP</span><span class="o">/</span><span class="m">1.1</span>
+</pre></div>
+</div>
+<p>This might return something like</p>
+<div class="highlight-json"><div class="highlight"><pre><span></span><span class="p">[</span>
+  <span class="p">{</span> <span class="nt">&quot;title&quot;</span><span class="p">:</span> <span class="s2">&quot;Workers Leaving The Lumière Factory In Lyon&quot;</span> <span class="p">},</span>
+  <span class="p">{</span> <span class="nt">&quot;title&quot;</span><span class="p">:</span> <span class="s2">&quot;The Dickson Experimental Sound Film&quot;</span> <span class="p">},</span>
+  <span class="p">{</span> <span class="nt">&quot;title&quot;</span><span class="p">:</span> <span class="s2">&quot;The Haunted Castle&quot;</span> <span class="p">}</span>
+<span class="p">]</span>
+</pre></div>
+</div>
+<p>However because a foreign key constraint exists between Films and Directors, we can request this information be included:</p>
+<div class="highlight-http"><div class="highlight"><pre><span></span><span class="nf">GET</span> <span class="nn">/films?select=title,directors(id,last_name)</span> <span class="kr">HTTP</span><span class="o">/</span><span class="m">1.1</span>
+</pre></div>
+</div>
+<p>Which would return</p>
+<div class="highlight-json"><div class="highlight"><pre><span></span><span class="p">[</span>
+  <span class="p">{</span> <span class="nt">&quot;title&quot;</span><span class="p">:</span> <span class="s2">&quot;Workers Leaving The Lumière Factory In Lyon&quot;</span><span class="p">,</span>
+    <span class="nt">&quot;directors&quot;</span><span class="p">:</span> <span class="p">{</span>
+      <span class="nt">&quot;id&quot;</span><span class="p">:</span> <span class="mi">2</span><span class="p">,</span>
+      <span class="nt">&quot;last_name&quot;</span><span class="p">:</span> <span class="s2">&quot;Lumière&quot;</span>
+    <span class="p">}</span>
+  <span class="p">},</span>
+  <span class="p">{</span> <span class="nt">&quot;title&quot;</span><span class="p">:</span> <span class="s2">&quot;The Dickson Experimental Sound Film&quot;</span><span class="p">,</span>
+    <span class="nt">&quot;directors&quot;</span><span class="p">:</span> <span class="p">{</span>
+      <span class="nt">&quot;id&quot;</span><span class="p">:</span> <span class="mi">1</span><span class="p">,</span>
+      <span class="nt">&quot;last_name&quot;</span><span class="p">:</span> <span class="s2">&quot;Dickson&quot;</span>
+    <span class="p">}</span>
+  <span class="p">},</span>
+  <span class="p">{</span> <span class="nt">&quot;title&quot;</span><span class="p">:</span> <span class="s2">&quot;The Haunted Castle&quot;</span><span class="p">,</span>
+    <span class="nt">&quot;directors&quot;</span><span class="p">:</span> <span class="p">{</span>
+      <span class="nt">&quot;id&quot;</span><span class="p">:</span> <span class="mi">3</span><span class="p">,</span>
+      <span class="nt">&quot;last_name&quot;</span><span class="p">:</span> <span class="s2">&quot;Méliès&quot;</span>
+    <span class="p">}</span>
+  <span class="p">}</span>
+<span class="p">]</span>
+</pre></div>
+</div>
+<p>In this example, since the relationship is a forward relationship, there is
+only one director associated with a film. As the table name is plural it might
+be preferable for it to be singular instead. An table name alias can accomplish
+this:</p>
+<div class="highlight-http"><div class="highlight"><pre><span></span><span class="nf">GET</span> <span class="nn">/films?select=title,director:directors(id,last_name)</span> <span class="kr">HTTP</span><span class="o">/</span><span class="m">1.1</span>
+</pre></div>
+</div>
+<p>PostgREST can also detect relations going through join tables. Thus you can request the Actors for Films (which in this case finds the information through Roles). You can also reverse the direction of inclusion, asking for all Directors with each including the list of their Films:</p>
+<div class="highlight-http"><div class="highlight"><pre><span></span><span class="nf">GET</span> <span class="nn">/directors?select=films(title,year)</span> <span class="kr">HTTP</span><span class="o">/</span><span class="m">1.1</span>
+</pre></div>
+</div>
+<div class="admonition note">
+<p class="first admonition-title">Note</p>
+<p class="last">Whenever foreign key relations change in the database schema you must refresh PostgREST’s schema cache to allow resource embedding to work properly. See the section <a class="reference internal" href="admin.html#schema-reloading"><span class="std std-ref">Schema Reloading</span></a>.</p>
+</div>
+<div class="section" id="embedded-operations">
+<h2>Embedded Operations<a class="headerlink" href="#embedded-operations" title="Permalink to this headline">¶</a></h2>
+<p>Embedded resources can be shaped similarly to their top-level counterparts. To do so, prefix the query parameters with the name of the embedded resource. For instance, to order the actors in each film:</p>
+<div class="highlight-http"><div class="highlight"><pre><span></span><span class="nf">GET</span> <span class="nn">/films?select=*,actors(*)&amp;actors.order=last_name,first_name</span> <span class="kr">HTTP</span><span class="o">/</span><span class="m">1.1</span>
+</pre></div>
+</div>
+<p>This sorts the list of actors in each film but does <em>not</em> change the order of the films themselves. To filter the roles returned with each film:</p>
+<div class="highlight-http"><div class="highlight"><pre><span></span><span class="nf">GET</span> <span class="nn">/films?select=*,roles(*)&amp;roles.character=in.(Chico,Harpo,Groucho)</span> <span class="kr">HTTP</span><span class="o">/</span><span class="m">1.1</span>
+</pre></div>
+</div>
+<p>Once again, this restricts the roles included to certain characters but does not filter the films in any way. Films without any of those characters would be included along with empty character lists.</p>
+<p>An <code class="docutils literal"><span class="pre">or</span></code> filter  can be used for a similar operation:</p>
+<div class="highlight-http"><div class="highlight"><pre><span></span><span class="nf">GET</span> <span class="nn">/films?select=*,roles(*)&amp;roles.or=(character.eq.Gummo,character.eq.Zeppo)</span> <span class="kr">HTTP</span><span class="o">/</span><span class="m">1.1</span>
+</pre></div>
+</div>
+<p>Limit and offset operations are possible:</p>
+<div class="highlight-http"><div class="highlight"><pre><span></span><span class="nf">GET</span> <span class="nn">/films?select=*,actors(*)&amp;actors.limit=10&amp;actors.offset=2</span> <span class="kr">HTTP</span><span class="o">/</span><span class="m">1.1</span>
+</pre></div>
+</div>
+<p>Embedded resources can be aliased and filters can be applied on these aliases:</p>
+<div class="highlight-http"><div class="highlight"><pre><span></span><span class="nf">GET</span> <span class="nn">/films?select=*,90_comps:competitions(name),91_comps:competitions(name)&amp;90_comps.year=eq.1990&amp;91_comps.year=eq.1991</span> <span class="kr">HTTP</span><span class="o">/</span><span class="m">1.1</span>
+</pre></div>
+</div>
+</div>
+</div>
+<div class="section" id="custom-queries">
+<h1>Custom Queries<a class="headerlink" href="#custom-queries" title="Permalink to this headline">¶</a></h1>
+<p>The PostgREST URL grammar limits the kinds of queries clients can perform. It prevents arbitrary, potentially poorly constructed and slow client queries. It’s good for quality of service, but means database administrators must create custom views and stored procedures to provide richer endpoints. The most common causes for custom endpoints are</p>
+<ul class="simple">
+<li>Table unions</li>
+<li>More complicated joins than those provided by <a class="reference internal" href="#id1">Resource Embedding</a></li>
+<li>Geo-spatial queries that require an argument, like “points near (lat,lon)”</li>
+<li>More sophisticated full-text search than a simple use of the <code class="code sql docutils literal"><span class="name"><span class="pre">fts</span></span></code> filter</li>
+</ul>
+</div>
+<div class="section" id="stored-procedures">
+<h1>Stored Procedures<a class="headerlink" href="#stored-procedures" title="Permalink to this headline">¶</a></h1>
+<p>Every stored procedure in the API-exposed database schema is accessible under the <code class="code docutils literal"><span class="pre">/rpc</span></code> prefix. The API endpoint supports POST (and in some cases GET) to execute the function.</p>
+<div class="code http highlight-default"><div class="highlight"><pre><span></span><span class="n">POST</span> <span class="o">/</span><span class="n">rpc</span><span class="o">/</span><span class="n">function_name</span> <span class="n">HTTP</span><span class="o">/</span><span class="mf">1.1</span>
+</pre></div>
+</div>
+<p>Such functions can perform any operations allowed by PostgreSQL (read data, modify data, and even DDL operations). However procedures in PostgreSQL marked with <code class="code docutils literal"><span class="pre">stable</span></code> or <code class="code docutils literal"><span class="pre">immutable</span></code> <a class="reference external" href="https://www.postgresql.org/docs/current/static/xfunc-volatility.html">volatility</a> can only read, not modify, the database and PostgREST executes them in a read-only transaction compatible for read-replicas. Stable and immutable functions can be called with the HTTP GET verb if desired.</p>
+<p>Procedures must be used with <a class="reference external" href="https://www.postgresql.org/docs/current/static/sql-syntax-calling-funcs.html#SQL-SYNTAX-CALLING-FUNCS-NAMED">named arguments</a>. To supply arguments in an API call, include a JSON object in the request payload and each key/value of the object will become an argument.</p>
+<p>For instance, assume we have created this function in the database.</p>
+<div class="code plpgsql highlight-default"><div class="highlight"><pre><span></span>CREATE FUNCTION add_them(a integer, b integer)
+RETURNS integer AS $$
+ SELECT $1 + $2;
+$$ LANGUAGE SQL IMMUTABLE STRICT;
+</pre></div>
+</div>
+<p>The client can call it by posting an object like</p>
+<div class="code http highlight-default"><div class="highlight"><pre><span></span><span class="n">POST</span> <span class="o">/</span><span class="n">rpc</span><span class="o">/</span><span class="n">add_them</span> <span class="n">HTTP</span><span class="o">/</span><span class="mf">1.1</span>
+
+<span class="p">{</span> <span class="s2">&quot;a&quot;</span><span class="p">:</span> <span class="mi">1</span><span class="p">,</span> <span class="s2">&quot;b&quot;</span><span class="p">:</span> <span class="mi">2</span> <span class="p">}</span>
+</pre></div>
+</div>
+<p>Because <code class="docutils literal"><span class="pre">add_them</span></code> is declared IMMUTABLE, we can alternately call the function with a GET request:</p>
+<div class="code http highlight-default"><div class="highlight"><pre><span></span>GET /rpc/add_them?a=1&amp;b=2 HTTP/1.1
+</pre></div>
+</div>
+<p>The function parameter names match the JSON object keys in the POST case, for the GET case they match the query parameters <code class="docutils literal"><span class="pre">?a=1&amp;b=2</span></code>. Note that PostgreSQL converts parameter names to lowercase unless you quote them like <code class="code sql docutils literal"><span class="keyword"><span class="pre">CREATE</span></span> <span class="keyword"><span class="pre">FUNCTION</span></span> <span class="name"><span class="pre">foo</span></span><span class="punctuation"><span class="pre">(</span></span><span class="literal string symbol"><span class="pre">“mixedCase”</span></span> <span class="name builtin"><span class="pre">text</span></span><span class="punctuation"><span class="pre">)</span></span> <span class="punctuation"><span class="pre">…</span></span></code>. You can also call a function that takes a single parameter of type json by sending the header <code class="code docutils literal"><span class="pre">Prefer:</span> <span class="pre">params=single-object</span></code> with your request. That way the JSON request body will be used as the single argument.</p>
+<div class="admonition note">
+<p class="first admonition-title">Note</p>
+<p>For versions prior to PostgreSQL 10, to pass a PostgreSQL native array you need to quote it as a string:</p>
+<div class="code http highlight-default"><div class="highlight"><pre><span></span><span class="n">POST</span> <span class="o">/</span><span class="n">rpc</span><span class="o">/</span><span class="n">native_array_func</span> <span class="n">HTTP</span><span class="o">/</span><span class="mf">1.1</span>
+
+<span class="p">{</span> <span class="s2">&quot;arg&quot;</span><span class="p">:</span> <span class="s2">&quot;{1,2,3}&quot;</span> <span class="p">}</span>
+</pre></div>
+</div>
+<p>In these versions we recommend using function arguments of type json to accept arrays from the client:</p>
+<div class="code http highlight-default"><div class="highlight"><pre><span></span><span class="n">POST</span> <span class="o">/</span><span class="n">rpc</span><span class="o">/</span><span class="n">json_array_func</span> <span class="n">HTTP</span><span class="o">/</span><span class="mf">1.1</span>
+
+<span class="p">{</span> <span class="s2">&quot;arg&quot;</span><span class="p">:</span> <span class="p">[</span><span class="mi">1</span><span class="p">,</span><span class="mi">2</span><span class="p">,</span><span class="mi">3</span><span class="p">]</span> <span class="p">}</span>
+</pre></div>
+</div>
+<p class="last">Starting from PostgreSQL 10, a json array from the client gets mapped normally to a PostgreSQL native array.</p>
+</div>
+<p>PostgREST will detect if the function is scalar or table-valued and will shape the response format accordingly:</p>
+<div class="code http highlight-default"><div class="highlight"><pre><span></span>GET /rpc/add_them?a=1&amp;b=2 HTTP/1.1
+
+3
+</pre></div>
+</div>
+<div class="code http highlight-default"><div class="highlight"><pre><span></span><span class="n">GET</span> <span class="o">/</span><span class="n">rpc</span><span class="o">/</span><span class="n">best_films_2017</span> <span class="n">HTTP</span><span class="o">/</span><span class="mf">1.1</span>
+
+<span class="p">[</span>
+  <span class="p">{</span> <span class="s2">&quot;title&quot;</span><span class="p">:</span> <span class="s2">&quot;Okja&quot;</span><span class="p">,</span> <span class="s2">&quot;rating&quot;</span><span class="p">:</span> <span class="mf">7.4</span><span class="p">},</span>
+  <span class="p">{</span> <span class="s2">&quot;title&quot;</span><span class="p">:</span> <span class="s2">&quot;Call me by your name&quot;</span><span class="p">,</span> <span class="s2">&quot;rating&quot;</span><span class="p">:</span> <span class="mi">8</span><span class="p">},</span>
+  <span class="p">{</span> <span class="s2">&quot;title&quot;</span><span class="p">:</span> <span class="s2">&quot;Blade Runner 2049&quot;</span><span class="p">,</span> <span class="s2">&quot;rating&quot;</span><span class="p">:</span> <span class="mf">8.1</span><span class="p">}</span>
+<span class="p">]</span>
+</pre></div>
+</div>
+<div class="admonition note">
+<p class="first admonition-title">Note</p>
+<p class="last">Whenever the function definition changes you must refresh PostgREST’s schema for this to work properly. See the section <a class="reference internal" href="admin.html#schema-reloading"><span class="std std-ref">Schema Reloading</span></a>.</p>
+</div>
+<p>A function response can be shaped using the same filters as the ones used for tables and views:</p>
+<div class="code http highlight-default"><div class="highlight"><pre><span></span>GET /rpc/top_rated_films?select=title,director:directors(*)&amp;year=eq.1990&amp;order=title.desc HTTP/1.1
+</pre></div>
+</div>
+<p>PostgreSQL has four procedural languages that are part of the core distribution: PL/pgSQL, PL/Tcl, PL/Perl, and PL/Python. There are many other procedural languages distributed as additional extensions. Also, plain SQL can be used to write functions (as shown in the example above).</p>
+<p>By default, a function is executed with the privileges of the user who calls it. This means that the user has to have all permissions to do the operations the procedure performs. Another option is to define the function with the <code class="code docutils literal"><span class="pre">SECURITY</span> <span class="pre">DEFINER</span></code> option. Then only one permission check will take place, the permission to call the function, and the operations in the function will have the authority of the user who owns the function itself. See <a class="reference external" href="https://www.postgresql.org/docs/current/static/sql-createfunction.html">PostgreSQL documentation</a> for more details.</p>
+<div class="admonition note">
+<p class="first admonition-title">Note</p>
+<p class="last">Why the <cite>/rpc</cite> prefix? One reason is to avoid name collisions between views and procedures. It also helps emphasize to API consumers that these functions are not normal restful things. The functions can have arbitrary and surprising behavior, not the standard “post creates a resource” thing that users expect from the other routes.</p>
+</div>
+<div class="section" id="explicit-qualification">
+<h2>Explicit Qualification<a class="headerlink" href="#explicit-qualification" title="Permalink to this headline">¶</a></h2>
+<p>As of <code class="docutils literal"><span class="pre">v5.0</span></code>, PostgREST executes a <code class="docutils literal"><span class="pre">SET</span> <span class="pre">SCHEMA</span> <span class="pre">&lt;your-exposed-schema&gt;</span></code> on each request, since this overrides the <a class="reference external" href="https://www.postgresql.org/docs/10/static/ddl-schemas.html#DDL-SCHEMAS-PATH">search_path</a>, function bodies need qualified schema names for any database object that is not in your exposed schema.</p>
+<div class="highlight-plpgsql"><div class="highlight"><pre><span></span><span class="c1">-- Assuming that:</span>
+<span class="c1">-- exposed schema is &quot;api&quot;</span>
+<span class="c1">-- ST_AsGeoJSON is in the &quot;public&quot; schema</span>
+<span class="c1">-- streets is in the &quot;api&quot; schema</span>
+<span class="k">CREATE</span> <span class="k">FUNCTION</span> <span class="n">api</span><span class="mf">.</span><span class="n">sample</span><span class="p">()</span> <span class="k">RETURNS</span> <span class="nb">json</span> <span class="k">AS</span> <span class="s">$$</span>
+  <span class="k">SELECT</span> <span class="n">public</span><span class="mf">.</span><span class="n">ST_AsGeoJSON</span><span class="p">(</span><span class="n">geom</span><span class="p">)</span><span class="o">::</span><span class="nb">json</span> <span class="k">FROM</span> <span class="n">streets</span> <span class="k">LIMIT</span> <span class="mf">1</span><span class="p">;</span>
+  <span class="c1">-- Notice streets doesn&#39;t need the schema prefix while ST_AsGeoJSON does</span>
+<span class="s">$$</span> <span class="k">LANGUAGE</span> <span class="n">sql</span><span class="p">;</span>
+</pre></div>
+</div>
+<p>To avoid having to qualify many database objects, you can add a <code class="docutils literal"><span class="pre">search_path</span></code> to the function:</p>
+<div class="highlight-plpgsql"><div class="highlight"><pre><span></span><span class="k">CREATE</span> <span class="k">FUNCTION</span> <span class="n">api</span><span class="mf">.</span><span class="n">sample_distance</span><span class="p">()</span> <span class="k">RETURNS</span> <span class="nb">float8</span> <span class="k">AS</span> <span class="s">$$</span>
+  <span class="k">SELECT</span> <span class="n">ST_MakePoint</span><span class="p">(</span><span class="mf">1</span><span class="p">,</span> <span class="mf">1</span><span class="p">)</span> <span class="o">&lt;-&gt;</span> <span class="n">ST_MakePoint</span><span class="p">(</span><span class="mf">10</span><span class="p">,</span> <span class="mf">10</span><span class="p">);</span>
+  <span class="c1">-- If the search_path is not specified, this would have to be:</span>
+  <span class="c1">-- SELECT public.ST_MakePoint(1, 1) operator(public.&lt;-&gt;) public.ST_MakePoint(10, 10);</span>
+<span class="s">$$</span> <span class="k">LANGUAGE</span> <span class="n">sql</span> <span class="k">SET</span> <span class="n">search_path</span> <span class="o">=</span> <span class="n">public</span><span class="p">,</span> <span class="n">api</span><span class="p">;</span>
+
+<span class="c1">-- existing functions can be altered to add a search_path</span>
+<span class="k">ALTER</span> <span class="k">FUNCTION</span> <span class="n">api</span><span class="mf">.</span><span class="n">make_point</span><span class="p">(</span><span class="nb">float8</span><span class="p">,</span> <span class="nb">float8</span><span class="p">)</span> <span class="k">SET</span> <span class="n">search_path</span> <span class="o">=</span> <span class="n">public</span><span class="p">,</span> <span class="n">api</span><span class="p">;</span>
+</pre></div>
+</div>
+</div>
+<div class="section" id="accessing-request-headers-cookies">
+<h2>Accessing Request Headers/Cookies<a class="headerlink" href="#accessing-request-headers-cookies" title="Permalink to this headline">¶</a></h2>
+<p>Stored procedures can access request headers and cookies by reading GUC variables set by PostgREST per request. They are named <code class="code docutils literal"><span class="pre">request.header.XYZ</span></code> and <code class="code docutils literal"><span class="pre">request.cookie.XYZ</span></code>. For example, to read the value of the Origin request header:</p>
+<div class="highlight-postgresql"><div class="highlight"><pre><span></span><span class="k">SELECT</span> <span class="n">current_setting</span><span class="p">(</span><span class="s1">&#39;request.header.origin&#39;</span><span class="p">,</span> <span class="k">true</span><span class="p">);</span>
+</pre></div>
+</div>
+</div>
+<div class="section" id="errors-and-http-status-codes">
+<h2>Errors and HTTP Status Codes<a class="headerlink" href="#errors-and-http-status-codes" title="Permalink to this headline">¶</a></h2>
+<p>Stored procedures can return non-200 HTTP status codes by raising SQL exceptions. For instance, here’s a saucy function that always responds with an error:</p>
+<div class="highlight-postgresql"><div class="highlight"><pre><span></span><span class="k">CREATE</span> <span class="k">OR</span> <span class="k">REPLACE</span> <span class="k">FUNCTION</span> <span class="n">just_fail</span><span class="p">()</span> <span class="k">RETURNS</span> <span class="nb">void</span>
+  <span class="k">LANGUAGE</span> <span class="n">plpgsql</span>
+  <span class="k">AS</span> <span class="s">$$</span>
+<span class="k">BEGIN</span>
+  <span class="k">RAISE</span> <span class="k">EXCEPTION</span> <span class="s1">&#39;I refuse!&#39;</span>
+    <span class="k">USING</span> <span class="n">DETAIL</span> <span class="o">=</span> <span class="s1">&#39;Pretty simple&#39;</span><span class="p">,</span>
+          <span class="n">HINT</span> <span class="o">=</span> <span class="s1">&#39;There is nothing you can do.&#39;</span><span class="p">;</span>
+<span class="k">END</span>
+<span class="s">$$</span><span class="p">;</span>
+</pre></div>
+</div>
+<p>Calling the function returns HTTP 400 with the body</p>
+<div class="highlight-json"><div class="highlight"><pre><span></span><span class="p">{</span>
+  <span class="nt">&quot;message&quot;</span><span class="p">:</span><span class="s2">&quot;I refuse!&quot;</span><span class="p">,</span>
+  <span class="nt">&quot;details&quot;</span><span class="p">:</span><span class="s2">&quot;Pretty simple&quot;</span><span class="p">,</span>
+  <span class="nt">&quot;hint&quot;</span><span class="p">:</span><span class="s2">&quot;There is nothing you can do.&quot;</span><span class="p">,</span>
+  <span class="nt">&quot;code&quot;</span><span class="p">:</span><span class="s2">&quot;P0001&quot;</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+<p>One way to customize the HTTP status code is by raising particular exceptions according to the PostgREST <a class="reference internal" href="#status-codes"><span class="std std-ref">error to status code mapping</span></a>. For example, <code class="code docutils literal"><span class="pre">RAISE</span> <span class="pre">insufficient_privilege</span></code> will respond with HTTP 401/403 as appropriate.</p>
+<p>For even greater control of the HTTP status code, raise an exception of the <code class="docutils literal"><span class="pre">PTxyz</span></code> type. For instance to respond with HTTP 402, raise ‘PT402’:</p>
+<div class="highlight-sql"><div class="highlight"><pre><span></span><span class="n">RAISE</span> <span class="k">sqlstate</span> <span class="s1">&#39;PT402&#39;</span> <span class="k">using</span>
+  <span class="n">message</span> <span class="o">=</span> <span class="s1">&#39;Payment Required&#39;</span><span class="p">,</span>
+  <span class="n">detail</span> <span class="o">=</span> <span class="s1">&#39;Quota exceeded&#39;</span><span class="p">,</span>
+  <span class="n">hint</span> <span class="o">=</span> <span class="s1">&#39;Upgrade your plan&#39;</span><span class="p">;</span>
+</pre></div>
+</div>
+<p>Returns:</p>
+<div class="highlight-http"><div class="highlight"><pre><span></span><span class="kr">HTTP</span><span class="o">/</span><span class="m">1.1</span> <span class="m">402</span> <span class="ne">Payment Required</span>
+<span class="na">Content-Type</span><span class="o">:</span> <span class="l">application/json; charset=utf-8</span>
+
+<span class="p">{</span><span class="nt">&quot;hint&quot;</span><span class="p">:</span><span class="s2">&quot;Upgrade your plan&quot;</span><span class="p">,</span><span class="nt">&quot;details&quot;</span><span class="p">:</span><span class="s2">&quot;Quota exceeded&quot;</span><span class="p">}</span>
+</pre></div>
+</div>
+</div>
+<div class="section" id="setting-response-headers">
+<h2>Setting Response Headers<a class="headerlink" href="#setting-response-headers" title="Permalink to this headline">¶</a></h2>
+<p>PostgREST reads the <code class="docutils literal"><span class="pre">response.headers</span></code> SQL variable to add extra headers to the HTTP response. Stored procedures can modify this variable. For instance, this statement would add caching headers to the response:</p>
+<div class="highlight-sql"><div class="highlight"><pre><span></span><span class="c1">-- tell client to cache response for two days</span>
+
+<span class="k">SET</span> <span class="k">LOCAL</span> <span class="ss">&quot;response.headers&quot;</span> <span class="o">=</span>
+  <span class="s1">&#39;[{&quot;Cache-Control&quot;: &quot;public&quot;}, {&quot;Cache-Control&quot;: &quot;max-age=259200&quot;}]&#39;</span><span class="p">;</span>
+</pre></div>
+</div>
+<p>Notice that the variable should be set to an <em>array</em> of single-key objects rather than a single multiple-key object. This is because headers such as <code class="docutils literal"><span class="pre">Cache-Control</span></code> or <code class="docutils literal"><span class="pre">Set-Cookie</span></code> need to be repeated when setting multiple values and an object would not allow the repeated key.</p>
+</div>
+</div>
+<div class="section" id="insertions-updates">
+<h1>Insertions / Updates<a class="headerlink" href="#insertions-updates" title="Permalink to this headline">¶</a></h1>
+<p>All tables and <a class="reference external" href="https://www.postgresql.org/docs/current/static/sql-createview.html#SQL-CREATEVIEW-UPDATABLE-VIEWS">auto-updatable views</a> can be modified through the API, subject to permissions of the requester’s database role.</p>
+<p>To create a row in a database table post a JSON object whose keys are the names of the columns you would like to create. Missing properties will be set to default values when applicable.</p>
+<div class="code HTTP highlight-default"><div class="highlight"><pre><span></span><span class="n">POST</span> <span class="o">/</span><span class="n">table_name</span> <span class="n">HTTP</span><span class="o">/</span><span class="mf">1.1</span>
+
+<span class="p">{</span> <span class="s2">&quot;col1&quot;</span><span class="p">:</span> <span class="s2">&quot;value1&quot;</span><span class="p">,</span> <span class="s2">&quot;col2&quot;</span><span class="p">:</span> <span class="s2">&quot;value2&quot;</span> <span class="p">}</span>
+</pre></div>
+</div>
+<p>The response will include a <code class="code docutils literal"><span class="pre">Location</span></code> header describing where to find the new object. If the table is write-only then constructing the Location header will cause a permissions error. To successfully insert an item to a write-only table you will need to suppress the Location response header by including the request header <code class="code docutils literal"><span class="pre">Prefer:</span> <span class="pre">return=minimal</span></code>.</p>
+<p>On the other end of the spectrum you can get the full created object back in the response to your request by including the header <code class="code docutils literal"><span class="pre">Prefer:</span> <span class="pre">return=representation</span></code>. That way you won’t have to make another HTTP call to discover properties that may have been filled in on the server side. You can also apply the standard <a class="reference internal" href="#v-filter"><span class="std std-ref">Vertical Filtering (Columns)</span></a> to these results.</p>
+<div class="admonition note">
+<p class="first admonition-title">Note</p>
+<p>When inserting a row you must post a JSON object, not quoted JSON.</p>
+<div class="code highlight-default"><div class="highlight"><pre><span></span><span class="n">Yes</span>
+<span class="p">{</span> <span class="s2">&quot;a&quot;</span><span class="p">:</span> <span class="mi">1</span><span class="p">,</span> <span class="s2">&quot;b&quot;</span><span class="p">:</span> <span class="mi">2</span> <span class="p">}</span>
+
+<span class="n">No</span>
+<span class="s2">&quot;{ </span><span class="se">\&quot;</span><span class="s2">a</span><span class="se">\&quot;</span><span class="s2">: 1, </span><span class="se">\&quot;</span><span class="s2">b</span><span class="se">\&quot;</span><span class="s2">: 2 }&quot;</span>
+</pre></div>
+</div>
+<p class="last">Some javascript libraries will post the data incorrectly if you’re not careful. For best results try one of the <a class="reference internal" href="intro.html#clientside-libraries"><span class="std std-ref">Client-Side Libraries</span></a> built for PostgREST.</p>
+</div>
+<p>To update a row or rows in a table, use the PATCH verb. Use <a class="reference internal" href="#h-filter"><span class="std std-ref">Horizontal Filtering (Rows)</span></a> to specify which record(s) to update. Here is an example query setting the <code class="code docutils literal"><span class="pre">category</span></code> column to child for all people below a certain age.</p>
+<div class="code HTTP highlight-default"><div class="highlight"><pre><span></span>PATCH /people?age=lt.13 HTTP/1.1
+
+{ &quot;category&quot;: &quot;child&quot; }
+</pre></div>
+</div>
+<p>Updates also support <code class="code docutils literal"><span class="pre">Prefer:</span> <span class="pre">return=representation</span></code> plus <a class="reference internal" href="#v-filter"><span class="std std-ref">Vertical Filtering (Columns)</span></a>.</p>
+<div class="admonition note">
+<p class="first admonition-title">Note</p>
+<p class="last">Beware of accidentally updating every row in a table. To learn to prevent that see <a class="reference internal" href="admin.html#block-fulltable"><span class="std std-ref">Block Full-Table Operations</span></a>.</p>
+</div>
+<div class="section" id="bulk-insert">
+<h2>Bulk Insert<a class="headerlink" href="#bulk-insert" title="Permalink to this headline">¶</a></h2>
+<p>Bulk insert works exactly like single row insert except that you provide either a JSON array of objects having uniform keys, or lines in CSV format. This not only minimizes the HTTP requests required but uses a single INSERT statement on the back-end for efficiency. Note that using CSV requires less parsing on the server and is much faster.</p>
+<p>To bulk insert CSV simply post to a table route with <code class="code docutils literal"><span class="pre">Content-Type:</span> <span class="pre">text/csv</span></code> and include the names of the columns as the first row. For instance</p>
+<div class="code HTTP highlight-default"><div class="highlight"><pre><span></span><span class="n">POST</span> <span class="o">/</span><span class="n">people</span> <span class="n">HTTP</span><span class="o">/</span><span class="mf">1.1</span>
+<span class="n">Content</span><span class="o">-</span><span class="n">Type</span><span class="p">:</span> <span class="n">text</span><span class="o">/</span><span class="n">csv</span>
+
+<span class="n">name</span><span class="p">,</span><span class="n">age</span><span class="p">,</span><span class="n">height</span>
+<span class="n">J</span> <span class="n">Doe</span><span class="p">,</span><span class="mi">62</span><span class="p">,</span><span class="mi">70</span>
+<span class="n">Jonas</span><span class="p">,</span><span class="mi">10</span><span class="p">,</span><span class="mi">55</span>
+</pre></div>
+</div>
+<p>An empty field (<code class="code docutils literal"><span class="pre">,,</span></code>) is coerced to an empty string and the reserved word <code class="code docutils literal"><span class="pre">NULL</span></code> is mapped to the SQL null value. Note that there should be no spaces between the column names and commas.</p>
+<p>To bulk insert JSON post an array of objects having all-matching keys</p>
+<div class="code HTTP highlight-default"><div class="highlight"><pre><span></span><span class="n">POST</span> <span class="o">/</span><span class="n">people</span> <span class="n">HTTP</span><span class="o">/</span><span class="mf">1.1</span>
+<span class="n">Content</span><span class="o">-</span><span class="n">Type</span><span class="p">:</span> <span class="n">application</span><span class="o">/</span><span class="n">json</span>
+
+<span class="p">[</span>
+  <span class="p">{</span> <span class="s2">&quot;name&quot;</span><span class="p">:</span> <span class="s2">&quot;J Doe&quot;</span><span class="p">,</span> <span class="s2">&quot;age&quot;</span><span class="p">:</span> <span class="mi">62</span><span class="p">,</span> <span class="s2">&quot;height&quot;</span><span class="p">:</span> <span class="mi">70</span> <span class="p">},</span>
+  <span class="p">{</span> <span class="s2">&quot;name&quot;</span><span class="p">:</span> <span class="s2">&quot;Janus&quot;</span><span class="p">,</span> <span class="s2">&quot;age&quot;</span><span class="p">:</span> <span class="mi">10</span><span class="p">,</span> <span class="s2">&quot;height&quot;</span><span class="p">:</span> <span class="mi">55</span> <span class="p">}</span>
+<span class="p">]</span>
+</pre></div>
+</div>
+</div>
+<div class="section" id="upsert">
+<h2>Upsert<a class="headerlink" href="#upsert" title="Permalink to this headline">¶</a></h2>
+<p>You can make an UPSERT with <code class="code docutils literal"><span class="pre">POST</span></code> and the <code class="code docutils literal"><span class="pre">Prefer:</span> <span class="pre">resolution=merge-duplicates</span></code> header:</p>
+<div class="code HTTP highlight-default"><div class="highlight"><pre><span></span><span class="n">POST</span> <span class="o">/</span><span class="n">employees</span> <span class="n">HTTP</span><span class="o">/</span><span class="mf">1.1</span>
+<span class="n">Prefer</span><span class="p">:</span> <span class="n">resolution</span><span class="o">=</span><span class="n">merge</span><span class="o">-</span><span class="n">duplicates</span>
+
+<span class="p">[</span>
+  <span class="p">{</span> <span class="s2">&quot;id&quot;</span><span class="p">:</span> <span class="mi">1</span><span class="p">,</span> <span class="s2">&quot;name&quot;</span><span class="p">:</span> <span class="s2">&quot;Old employee 1&quot;</span><span class="p">,</span> <span class="s2">&quot;salary&quot;</span><span class="p">:</span> <span class="mi">30000</span> <span class="p">},</span>
+  <span class="p">{</span> <span class="s2">&quot;id&quot;</span><span class="p">:</span> <span class="mi">2</span><span class="p">,</span> <span class="s2">&quot;name&quot;</span><span class="p">:</span> <span class="s2">&quot;Old employee 2&quot;</span><span class="p">,</span> <span class="s2">&quot;salary&quot;</span><span class="p">:</span> <span class="mi">42000</span> <span class="p">},</span>
+  <span class="p">{</span> <span class="s2">&quot;id&quot;</span><span class="p">:</span> <span class="mi">3</span><span class="p">,</span> <span class="s2">&quot;name&quot;</span><span class="p">:</span> <span class="s2">&quot;New employee 3&quot;</span><span class="p">,</span> <span class="s2">&quot;salary&quot;</span><span class="p">:</span> <span class="mi">50000</span> <span class="p">}</span>
+<span class="p">]</span>
+</pre></div>
+</div>
+<p>UPSERT operates based on the primary key columns, you must specify all of them. You can also choose to ignore the duplicates with <code class="code docutils literal"><span class="pre">Prefer:</span> <span class="pre">resolution=ignore-duplicates</span></code>.</p>
+<p>A single row UPSERT can be done by using <code class="code docutils literal"><span class="pre">PUT</span></code> and filtering the primary key columns with <code class="code docutils literal"><span class="pre">eq</span></code>:</p>
+<div class="code HTTP highlight-default"><div class="highlight"><pre><span></span>PUT /employees?id=eq.4 HTTP/1.1
+
+{ &quot;id&quot;: 4, &quot;name&quot;: &quot;Sara B.&quot;, &quot;salary&quot;: 60000 }
+</pre></div>
+</div>
+<p>All the columns must be specified in the request body, including the primary key columns.</p>
+<div class="admonition note">
+<p class="first admonition-title">Note</p>
+<p class="last">This feature is only available starting from PostgreSQL 9.5 since it uses the <a class="reference external" href="https://www.postgresql.org/docs/9.5/static/sql-insert.html#SQL-ON-CONFLICT">ON CONFLICT clause</a>.</p>
+</div>
+</div>
+</div>
+<div class="section" id="deletions">
+<h1>Deletions<a class="headerlink" href="#deletions" title="Permalink to this headline">¶</a></h1>
+<p>To delete rows in a table, use the DELETE verb plus <a class="reference internal" href="#h-filter"><span class="std std-ref">Horizontal Filtering (Rows)</span></a>. For instance deleting inactive users:</p>
+<div class="highlight-HTTP"><div class="highlight"><pre><span></span><span class="nf">DELETE</span> <span class="nn">/user?active=is.false</span> <span class="kr">HTTP</span><span class="o">/</span><span class="m">1.1</span>
+</pre></div>
+</div>
+<div class="admonition note">
+<p class="first admonition-title">Note</p>
+<p class="last">Beware of accidentally deleting all rows in a table. To learn to prevent that see <a class="reference internal" href="admin.html#block-fulltable"><span class="std std-ref">Block Full-Table Operations</span></a>.</p>
+</div>
+</div>
+<div class="section" id="openapi-support">
+<h1>OpenAPI Support<a class="headerlink" href="#openapi-support" title="Permalink to this headline">¶</a></h1>
+<p>Every API hosted by PostgREST automatically serves a full <a class="reference external" href="https://www.openapis.org/">OpenAPI</a> description on the root path. This provides a list of all endpoints(tables, foreign tables, views, functions), along with supported HTTP verbs and example payloads. For extra customization, the OpenAPI output contains a “description” field for every <a class="reference external" href="https://www.postgresql.org/docs/current/static/sql-comment.html">SQL comment</a> on any database object. For instance,</p>
+<div class="highlight-sql"><div class="highlight"><pre><span></span><span class="k">COMMENT</span> <span class="k">ON</span> <span class="k">SCHEMA</span> <span class="n">mammals</span> <span class="k">IS</span>
+  <span class="s1">&#39;A warm-blooded vertebrate animal of a class that is distinguished by the secretion of milk by females for the nourishment of the young&#39;</span><span class="p">;</span>
+
+<span class="k">COMMENT</span> <span class="k">ON</span> <span class="k">TABLE</span> <span class="n">monotremes</span> <span class="k">IS</span>
+  <span class="s1">&#39;Freakish mammals lay the best eggs for breakfast&#39;</span><span class="p">;</span>
+
+<span class="k">COMMENT</span> <span class="k">ON</span> <span class="k">COLUMN</span> <span class="n">monotremes</span><span class="p">.</span><span class="n">has_venomous_claw</span> <span class="k">IS</span>
+  <span class="s1">&#39;Sometimes breakfast is not worth it&#39;</span><span class="p">;</span>
+</pre></div>
+</div>
+<p>These unsavory comments will appear in the generated JSON as the fields, <code class="docutils literal"><span class="pre">info.description</span></code>, <code class="docutils literal"><span class="pre">definitions.monotremes.description</span></code> and <code class="docutils literal"><span class="pre">definitions.monotremes.properties.has_venomous_claw.description</span></code>.</p>
+<p>Also if you wish to generate a <code class="docutils literal"><span class="pre">summary</span></code> field you can do it by having a multiple line comment, the <code class="docutils literal"><span class="pre">summary</span></code> will be the first line and the <code class="docutils literal"><span class="pre">description</span></code> the lines that follow it:</p>
+<div class="highlight-plpgsql"><div class="highlight"><pre><span></span><span class="k">COMMENT</span> <span class="k">ON</span> <span class="k">TABLE</span> <span class="n">entities</span> <span class="k">IS</span>
+  <span class="s">$$Entities summary</span>
+
+<span class="s">  Entities description that</span>
+<span class="s">  spans</span>
+<span class="s">  multiple lines$$</span><span class="p">;</span>
+</pre></div>
+</div>
+<p>You can use a tool like <a class="reference external" href="http://swagger.io/swagger-ui/">Swagger UI</a> to create beautiful documentation from the description and to host an interactive web-based dashboard. The dashboard allows developers to make requests against a live PostgREST server, and provides guidance with request headers and example request bodies.</p>
+<div class="admonition note">
+<p class="first admonition-title">Note</p>
+<p class="last">The OpenAPI information can go out of date as the schema changes under a running server. To learn how to refresh the cache see <a class="reference internal" href="admin.html#schema-reloading"><span class="std std-ref">Schema Reloading</span></a>.</p>
+</div>
+</div>
+<div class="section" id="http-status-codes">
+<span id="status-codes"></span><h1>HTTP Status Codes<a class="headerlink" href="#http-status-codes" title="Permalink to this headline">¶</a></h1>
+<p>PostgREST translates <a class="reference external" href="https://www.postgresql.org/docs/current/static/errcodes-appendix.html">PostgreSQL error codes</a> into HTTP status as follows:</p>
+<table border="1" class="docutils">
+<colgroup>
+<col width="31%" />
+<col width="30%" />
+<col width="39%" />
+</colgroup>
+<thead valign="bottom">
+<tr class="row-odd"><th class="head">PostgreSQL error code(s)</th>
+<th class="head">HTTP status</th>
+<th class="head">Error description</th>
+</tr>
+</thead>
+<tbody valign="top">
+<tr class="row-even"><td>08*</td>
+<td>503</td>
+<td>pg connection err</td>
+</tr>
+<tr class="row-odd"><td>09*</td>
+<td>500</td>
+<td>triggered action exception</td>
+</tr>
+<tr class="row-even"><td>0L*</td>
+<td>403</td>
+<td>invalid grantor</td>
+</tr>
+<tr class="row-odd"><td>0P*</td>
+<td>403</td>
+<td>invalid role specification</td>
+</tr>
+<tr class="row-even"><td>23503</td>
+<td>409</td>
+<td>foreign key violation</td>
+</tr>
+<tr class="row-odd"><td>23505</td>
+<td>409</td>
+<td>uniqueness violation</td>
+</tr>
+<tr class="row-even"><td>25*</td>
+<td>500</td>
+<td>invalid transaction state</td>
+</tr>
+<tr class="row-odd"><td>28*</td>
+<td>403</td>
+<td>invalid auth specification</td>
+</tr>
+<tr class="row-even"><td>2D*</td>
+<td>500</td>
+<td>invalid transaction termination</td>
+</tr>
+<tr class="row-odd"><td>38*</td>
+<td>500</td>
+<td>external routine exception</td>
+</tr>
+<tr class="row-even"><td>39*</td>
+<td>500</td>
+<td>external routine invocation</td>
+</tr>
+<tr class="row-odd"><td>3B*</td>
+<td>500</td>
+<td>savepoint exception</td>
+</tr>
+<tr class="row-even"><td>40*</td>
+<td>500</td>
+<td>transaction rollback</td>
+</tr>
+<tr class="row-odd"><td>53*</td>
+<td>503</td>
+<td>insufficient resources</td>
+</tr>
+<tr class="row-even"><td>54*</td>
+<td>413</td>
+<td>too complex</td>
+</tr>
+<tr class="row-odd"><td>55*</td>
+<td>500</td>
+<td>obj not in prerequisite state</td>
+</tr>
+<tr class="row-even"><td>57*</td>
+<td>500</td>
+<td>operator intervention</td>
+</tr>
+<tr class="row-odd"><td>58*</td>
+<td>500</td>
+<td>system error</td>
+</tr>
+<tr class="row-even"><td>F0*</td>
+<td>500</td>
+<td>conf file error</td>
+</tr>
+<tr class="row-odd"><td>HV*</td>
+<td>500</td>
+<td>foreign data wrapper error</td>
+</tr>
+<tr class="row-even"><td>P0001</td>
+<td>400</td>
+<td>default code for “raise”</td>
+</tr>
+<tr class="row-odd"><td>P0*</td>
+<td>500</td>
+<td>PL/pgSQL error</td>
+</tr>
+<tr class="row-even"><td>XX*</td>
+<td>500</td>
+<td>internal error</td>
+</tr>
+<tr class="row-odd"><td>42883</td>
+<td>404</td>
+<td>undefined function</td>
+</tr>
+<tr class="row-even"><td>42P01</td>
+<td>404</td>
+<td>undefined table</td>
+</tr>
+<tr class="row-odd"><td>42501</td>
+<td><div class="first last line-block">
+<div class="line">if authenticated 403,</div>
+<div class="line">else 401</div>
+</div>
+</td>
+<td>insufficient privileges</td>
+</tr>
+<tr class="row-even"><td>other</td>
+<td>500</td>
+<td>&#160;</td>
+</tr>
+</tbody>
+</table>
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+  <h3><a href="index.html">Table Of Contents</a></h3>
+  <ul>
+<li><a class="reference internal" href="#">Tables and Views</a><ul>
+<li><a class="reference internal" href="#horizontal-filtering-rows">Horizontal Filtering (Rows)</a><ul>
+<li><a class="reference internal" href="#full-text-search">Full-Text Search</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#vertical-filtering-columns">Vertical Filtering (Columns)</a><ul>
+<li><a class="reference internal" href="#computed-columns">Computed Columns</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#ordering">Ordering</a></li>
+<li><a class="reference internal" href="#limits-and-pagination">Limits and Pagination</a></li>
+<li><a class="reference internal" href="#response-format">Response Format</a></li>
+<li><a class="reference internal" href="#singular-or-plural">Singular or Plural</a></li>
+<li><a class="reference internal" href="#binary-output">Binary output</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#unicode-support">Unicode Support</a></li>
+<li><a class="reference internal" href="#resource-embedding">Resource Embedding</a><ul>
+<li><a class="reference internal" href="#embedded-operations">Embedded Operations</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#custom-queries">Custom Queries</a></li>
+<li><a class="reference internal" href="#stored-procedures">Stored Procedures</a><ul>
+<li><a class="reference internal" href="#explicit-qualification">Explicit Qualification</a></li>
+<li><a class="reference internal" href="#accessing-request-headers-cookies">Accessing Request Headers/Cookies</a></li>
+<li><a class="reference internal" href="#errors-and-http-status-codes">Errors and HTTP Status Codes</a></li>
+<li><a class="reference internal" href="#setting-response-headers">Setting Response Headers</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#insertions-updates">Insertions / Updates</a><ul>
+<li><a class="reference internal" href="#bulk-insert">Bulk Insert</a></li>
+<li><a class="reference internal" href="#upsert">Upsert</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#deletions">Deletions</a></li>
+<li><a class="reference internal" href="#openapi-support">OpenAPI Support</a></li>
+<li><a class="reference internal" href="#http-status-codes">HTTP Status Codes</a></li>
+</ul>
+
+  <h4>Previous topic</h4>
+  <p class="topless"><a href="install.html"
+                        title="previous chapter">Binary Release</a></p>
+  <h4>Next topic</h4>
+  <p class="topless"><a href="auth.html"
+                        title="next chapter">Overview of Role System</a></p>
+  <div role="note" aria-label="source link">
+    <h3>This Page</h3>
+    <ul class="this-page-menu">
+      <li><a href="_sources/api.rst.txt"
+            rel="nofollow">Show Source</a></li>
+    </ul>
+   </div>
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <form class="search" action="search.html" method="get">
+      <div><input type="text" name="q" /></div>
+      <div><input type="submit" value="Go" /></div>
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="auth.html" title="Overview of Role System"
+             >next</a> |</li>
+        <li class="right" >
+          <a href="install.html" title="Binary Release"
+             >previous</a> |</li>
+        <li class="nav-item nav-item-0"><a href="index.html">PostgREST 5.0.0 documentation</a> &#187;</li> 
+      </ul>
+    </div>
+    <div class="footer" role="contentinfo">
+        &#169; Copyright 2017, Joe Nelson.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.6.7.
+    </div>
+  </body>
+</html>
