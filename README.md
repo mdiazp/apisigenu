@@ -14,4 +14,4 @@ Logs
 
 About swagger ui
 * Download de swagger specification of postgrest api, convert json to yaml and
-put the file in /etc/apisigenu/apisigenu_doc/swagger.yaml
+put the file in /etc/apisigenu/apisigenu_doc/swagger.yaml# apisigenu
